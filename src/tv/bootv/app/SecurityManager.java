@@ -108,7 +108,7 @@ public class SecurityManager {
     }
 
     public boolean isBiometricSupported() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return false;
         }
 
@@ -123,65 +123,95 @@ public class SecurityManager {
 
         if (!hasFeature) return false;
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                FingerprintManager fm = (FingerprintManager) mContext.getSystemService(Context.FINGERPRINT_SERVICE);
-                if (fm != null) {
-                    return fm.isHardwareDetected() && fm.hasEnrolledFingerprints();
-                }
-            } catch (Exception ignored) {}
-        }
+        try {
+            FingerprintManager fm = (FingerprintManager) mContext.getSystemService(Context.FINGERPRINT_SERVICE);
+            if (fm != null) {
+                return fm.isHardwareDetected() && fm.hasEnrolledFingerprints();
+            }
+        } catch (Exception ignored) {}
 
-        return true;
+        return false;
     }
 
     public void authenticateWithBiometrics(final Activity activity, final BiometricCallback callback) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || !isBiometricSupported()) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || !isBiometricSupported()) {
             callback.onUsePin();
             return;
         }
 
-        try {
-            BiometricPrompt.Builder builder = new BiometricPrompt.Builder(activity)
-                    .setTitle("Unlock BOOTV")
-                    .setSubtitle("Confirm your fingerprint to access BOOTV")
-                    .setDescription("Created by BOOTLOOP • Secure App Lock")
-                    .setNegativeButton("Use PIN Code", activity.getMainExecutor(), new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            callback.onUsePin();
-                        }
-                    });
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                BiometricPrompt.Builder builder = new BiometricPrompt.Builder(activity)
+                        .setTitle("Unlock BOOTV")
+                        .setSubtitle("Confirm your fingerprint to access BOOTV")
+                        .setDescription("Created by BOOTLOOP • Secure App Lock")
+                        .setNegativeButton("Use PIN Code", activity.getMainExecutor(), new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                callback.onUsePin();
+                            }
+                        });
 
-            BiometricPrompt prompt = builder.build();
-            CancellationSignal cancellationSignal = new CancellationSignal();
+                BiometricPrompt prompt = builder.build();
+                CancellationSignal cancellationSignal = new CancellationSignal();
 
-            prompt.authenticate(cancellationSignal, activity.getMainExecutor(), new BiometricPrompt.AuthenticationCallback() {
-                @Override
-                public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
-                    super.onAuthenticationSucceeded(result);
-                    callback.onSuccess();
-                }
-
-                @Override
-                public void onAuthenticationError(int errorCode, CharSequence errString) {
-                    super.onAuthenticationError(errorCode, errString);
-                    // errorCode 13 = BIOMETRIC_ERROR_NEGATIVE_BUTTON, 10 = USER_CANCELED, 5 = CANCELED
-                    if (errorCode == 13 || errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED || errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED) {
-                        callback.onUsePin();
-                    } else {
-                        callback.onError(errString != null ? errString.toString() : "Biometric error");
+                prompt.authenticate(cancellationSignal, activity.getMainExecutor(), new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
+                        super.onAuthenticationSucceeded(result);
+                        callback.onSuccess();
                     }
-                }
 
-                @Override
-                public void onAuthenticationFailed() {
-                    super.onAuthenticationFailed();
-                    callback.onFailed();
+                    @Override
+                    public void onAuthenticationError(int errorCode, CharSequence errString) {
+                        super.onAuthenticationError(errorCode, errString);
+                        // errorCode 13 = BIOMETRIC_ERROR_NEGATIVE_BUTTON, 10 = USER_CANCELED, 5 = CANCELED
+                        if (errorCode == 13 || errorCode == BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED || errorCode == BiometricPrompt.BIOMETRIC_ERROR_CANCELED) {
+                            callback.onUsePin();
+                        } else {
+                            callback.onError(errString != null ? errString.toString() : "Biometric error");
+                        }
+                    }
+
+                    @Override
+                    public void onAuthenticationFailed() {
+                        super.onAuthenticationFailed();
+                        callback.onFailed();
+                    }
+                });
+            } catch (Exception e) {
+                callback.onUsePin();
+            }
+        } else {
+            try {
+                FingerprintManager fm = (FingerprintManager) mContext.getSystemService(Context.FINGERPRINT_SERVICE);
+                if (fm != null && fm.isHardwareDetected() && fm.hasEnrolledFingerprints()) {
+                    CancellationSignal cancellationSignal = new CancellationSignal();
+                    fm.authenticate(null, cancellationSignal, 0, new FingerprintManager.AuthenticationCallback() {
+                        @Override
+                        public void onAuthenticationSucceeded(FingerprintManager.AuthenticationResult result) {
+                            super.onAuthenticationSucceeded(result);
+                            callback.onSuccess();
+                        }
+
+                        @Override
+                        public void onAuthenticationError(int errorCode, CharSequence errString) {
+                            super.onAuthenticationError(errorCode, errString);
+                            callback.onError(errString != null ? errString.toString() : "Fingerprint error");
+                        }
+
+                        @Override
+                        public void onAuthenticationFailed() {
+                            super.onAuthenticationFailed();
+                            callback.onFailed();
+                        }
+                    }, null);
+                } else {
+                    callback.onUsePin();
                 }
-            });
-        } catch (Exception e) {
-            callback.onUsePin();
+            } catch (Exception e) {
+                callback.onUsePin();
+            }
         }
     }
 }

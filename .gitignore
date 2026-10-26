@@ -7,6 +7,8 @@ build/
 # Keystores & sensitive credentials
 *.keystore
 *.jks
+git-ssh.sh
+push.sh
 
 # IDE & Editor files
 .idea/

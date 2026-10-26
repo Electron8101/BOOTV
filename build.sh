@@ -43,9 +43,9 @@ javac -source 8 -target 8 -proc:none \
   -d build/obj \
   $(find build/gen src -name "*.java")
 
-# 4. Dexing with d8 (optimized for min-api 24)
+# 4. Dexing with d8 (optimized for min-api 21)
 echo "=== [4/5] Dexing bytecode with d8 ==="
-d8 --min-api 24 --lib "$ANDROID_JAR" \
+d8 --min-api 21 --lib "$ANDROID_JAR" \
   --output build/apk \
   $(find build/obj -name "*.class")
 
