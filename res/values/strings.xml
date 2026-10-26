@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BOOTV</string>
+    <string name="loading">Loading BOOTV…</string>
+    <string name="error_network">Unable to connect. Check your internet connection.</string>
+    <string name="retry">Retry</string>
+</resources>

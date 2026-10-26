@@ -1,0 +1,19 @@
+# Built binaries & intermediate directories
+build/
+*.apk
+*.apk.idsig
+*.zip
+
+# Keystores & sensitive credentials
+*.keystore
+*.jks
+
+# IDE & Editor files
+.idea/
+*.iml
+.gradle/
+.vscode/
+
+# System & OS junk
+.DS_Store
+Thumbs.db
