@@ -216,13 +216,12 @@
         android:background="@color/black"
         android:visibility="gone">
 
-        <!-- ExoMedia Native Video Player -->
-        <com.devbrackets.android.exomedia.ui.widget.VideoView
-            android:id="@+id/exomedia_video_view"
+        <!-- Video Surface Holder (where WebView CustomView is attached) -->
+        <FrameLayout
+            android:id="@+id/video_surface_holder"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center"
-            app:videoControlsProvider="tv.bootv.app.NoOpControlsProvider" />
+            android:layout_gravity="center" />
 
         <!-- Transparent gesture detection layer -->
         <View

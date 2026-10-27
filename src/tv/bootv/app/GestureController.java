@@ -329,6 +329,13 @@ public class GestureController {
         mCurrentVideoDuration = durationSec;
     }
 
+    public void updatePlaybackState(boolean isPlaying) {
+        mIsPlaying = isPlaying;
+        if (mBtnPlayPause != null) {
+            mBtnPlayPause.setText(isPlaying ? "⏸" : "▶");
+        }
+    }
+
     private void triggerSeekZone(final View zone) {
         if (zone == null) return;
         zone.setVisibility(View.VISIBLE);
@@ -588,7 +595,7 @@ public class GestureController {
             mListener.onPlaybackControl(mIsPlaying);
         }
         if (mBtnPlayPause != null) {
-            mBtnPlayPause.setText(mIsPlaying ? "⏸ Pause" : "▶ Play");
+            mBtnPlayPause.setText(mIsPlaying ? "⏸" : "▶");
         }
         showFeedback(mIsPlaying ? "▶ Playing" : "⏸ Paused");
     }
@@ -597,7 +604,7 @@ public class GestureController {
         mIsLocked = false;
         mIsPlaying = true;
         if (mBtnPlayPause != null) {
-            mBtnPlayPause.setText("⏸ Pause");
+            mBtnPlayPause.setText("⏸");
         }
         mActiveGesture = GESTURE_NONE;
         mCurrentSeekDelta = 0;

@@ -23,12 +23,6 @@ import android.os.Message;
 import android.util.Rational;
 import android.webkit.JavascriptInterface;
 import android.widget.SeekBar;
-import com.devbrackets.android.exomedia.ui.widget.VideoView;
-import com.devbrackets.android.exomedia.listener.OnPreparedListener;
-import com.devbrackets.android.exomedia.listener.OnCompletionListener;
-import com.devbrackets.android.exomedia.listener.OnErrorListener;
-import com.devbrackets.android.exomedia.listener.OnBufferUpdateListener;
-import com.devbrackets.android.exomedia.core.video.scale.ScaleType;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -197,6 +191,49 @@ public class MainActivity extends Activity {
         "      for (var i = 0; i < vs.length; i++) vs[i].playbackRate = speed;" +
         "    } catch(e) {}" +
         "  }" +
+        "  function notify(cur, dur, playing) {" +
+        "    if (dur > 0) {" +
+        "      if (window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
+        "        window.AndroidBridge.onVideoTimeUpdate(cur, dur, playing);" +
+        "      } else {" +
+        "        try { window.top.postMessage({ type: 'SISKA_VIDEO_TIME_UPDATE', current: cur, duration: dur, playing: playing }, '*'); } catch(err) {}" +
+        "        try { window.parent.postMessage({ type: 'SISKA_VIDEO_TIME_UPDATE', current: cur, duration: dur, playing: playing }, '*'); } catch(err) {}" +
+        "      }" +
+        "    }" +
+        "  }" +
+        "  function hookEmbedVideo(v) {" +
+        "    if (!v || v.__siska_hooked) return;" +
+        "    v.__siska_hooked = true;" +
+        "    var evts = ['timeupdate', 'play', 'pause', 'seeking', 'seeked', 'durationchange'];" +
+        "    for (var i = 0; i < evts.length; i++) {" +
+        "      v.addEventListener(evts[i], function() {" +
+        "        if (v.duration && v.duration > 0) notify(v.currentTime || 0, v.duration, !v.paused);" +
+        "      });" +
+        "    }" +
+        "  }" +
+        "  function hookAllEmbedVideos() {" +
+        "    try {" +
+        "      var vs = document.querySelectorAll('video');" +
+        "      for (var i = 0; i < vs.length; i++) hookEmbedVideo(vs[i]);" +
+        "    } catch(e) {}" +
+        "    try {" +
+        "      if (window.jwplayer) {" +
+        "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
+        "        if (p && typeof p.on === 'function' && !p.__siska_hooked) {" +
+        "          p.__siska_hooked = true;" +
+        "          p.on('time', function(e) { notify(e.position, e.duration, true); });" +
+        "          p.on('play', function() { notify(p.getPosition() || 0, p.getDuration() || 0, true); });" +
+        "          p.on('pause', function() { notify(p.getPosition() || 0, p.getDuration() || 0, false); });" +
+        "          p.on('seek', function(e) { notify(e.offset || 0, p.getDuration() || 0, true); });" +
+        "        }" +
+        "      }" +
+        "    } catch(e) {}" +
+        "  }" +
+        "  hookAllEmbedVideos();" +
+        "  try {" +
+        "    var obs = new MutationObserver(function() { hookAllEmbedVideos(); });" +
+        "    obs.observe(document.documentElement || document.body, { childList: true, subtree: true });" +
+        "  } catch(e) {}" +
         "  setInterval(function() {" +
         "    try {" +
         "      var cur = 0, dur = 0, playing = false;" +
@@ -219,16 +256,9 @@ public class MainActivity extends Activity {
         "          }" +
         "        }" +
         "      }" +
-        "      if (dur > 0) {" +
-        "        if (window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
-        "          window.AndroidBridge.onVideoTimeUpdate(cur, dur, playing);" +
-        "        } else {" +
-        "          try { window.top.postMessage({ type: 'SISKA_VIDEO_TIME_UPDATE', current: cur, duration: dur, playing: playing }, '*'); } catch(err) {}" +
-        "          try { window.parent.postMessage({ type: 'SISKA_VIDEO_TIME_UPDATE', current: cur, duration: dur, playing: playing }, '*'); } catch(err) {}" +
-        "        }" +
-        "      }" +
+        "      notify(cur, dur, playing);" +
         "    } catch(e) {}" +
-        "  }, 500);" +
+        "  }, 350);" +
         "  window.addEventListener('message', function(e) {" +
         "    if (!e.data || typeof e.data !== 'object') return;" +
         "    if (e.data.type === 'SISKA_VIDEO_SEEK') {" +
@@ -312,7 +342,7 @@ public class MainActivity extends Activity {
 
     private WebView mWebView;
     private FrameLayout mFullscreenContainer;
-    private VideoView mExoVideoView;
+    private FrameLayout mVideoSurfaceHolder;
     private View mCustomView;
     private WebChromeClient.CustomViewCallback mCustomViewCallback;
 
@@ -411,7 +441,7 @@ public class MainActivity extends Activity {
 
         mWebView = findViewById(R.id.webview);
         mFullscreenContainer = findViewById(R.id.fullscreen_container);
-        setupExoMedia();
+        mVideoSurfaceHolder = findViewById(R.id.video_surface_holder);
         mProgressBar = findViewById(R.id.progressBar);
         mErrorLayout = findViewById(R.id.error_layout);
         mBtnRetry = findViewById(R.id.btn_retry);
@@ -498,12 +528,11 @@ public class MainActivity extends Activity {
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     mIsUserSeeking = false;
                     double ratio = seekBar.getProgress() / 1000.0;
-                    if (mExoVideoView != null) {
-                        long durMs = mExoVideoView.getDuration();
-                        if (durMs > 0) {
-                            long targetMs = (long) (ratio * durMs);
-                            mExoVideoView.seekTo(targetMs);
-                        }
+                    if (mVideoDuration > 0) {
+                        double targetSec = ratio * mVideoDuration;
+                        seekVideoTo(targetSec);
+                    } else {
+                        seekVideoRatio(ratio);
                     }
                     if (mGestureController != null) {
                         mGestureController.scheduleAutoHideControls();
@@ -516,11 +545,7 @@ public class MainActivity extends Activity {
             mBtnDockPlayFullscreen.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    if (mLastStreamUrl != null && !mLastStreamUrl.isEmpty()) {
-                        playVideoWithExoMedia(mLastStreamUrl);
-                    } else {
-                        triggerFullscreenVideo();
-                    }
+                    triggerFullscreenVideo();
                 }
             });
         }
@@ -1215,133 +1240,22 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void setupExoMedia() {
-        mExoVideoView = findViewById(R.id.exomedia_video_view);
-        if (mExoVideoView == null) return;
-
-        mExoVideoView.setVideoControls(null);
-
-        mExoVideoView.setOnPreparedListener(new OnPreparedListener() {
-            @Override
-            public void onPrepared() {
-                long durMs = mExoVideoView.getDuration();
-                if (durMs > 0) {
-                    mVideoDuration = durMs / 1000.0;
-                    if (mTxtTimeTotal != null) {
-                        mTxtTimeTotal.setText(formatTime((long) mVideoDuration));
-                    }
-                }
-                mExoVideoView.start();
-                if (mBtnPlayPause != null) {
-                    mBtnPlayPause.setText("⏸");
-                }
-                startExoProgressTracker();
-            }
-        });
-
-        mExoVideoView.setOnBufferUpdateListener(new OnBufferUpdateListener() {
-            @Override
-            public void onBufferingUpdate(int percent) {
-                if (mPlayerSeekBar != null) {
-                    mPlayerSeekBar.setSecondaryProgress(percent * 10);
-                }
-            }
-        });
-
-        mExoVideoView.setOnCompletionListener(new OnCompletionListener() {
-            @Override
-            public void onCompletion() {
-                if (mBtnPlayPause != null) {
-                    mBtnPlayPause.setText("▶");
-                }
-                stopExoProgressTracker();
-            }
-        });
-
-        mExoVideoView.setOnErrorListener(new OnErrorListener() {
-            @Override
-            public boolean onError(Exception e) {
-                Toast.makeText(MainActivity.this, "Stream error, opening in external player...", Toast.LENGTH_SHORT).show();
-                launchExternalPlayer(mLastStreamUrl, mLastStreamFormat);
-                return true;
-            }
-        });
-    }
-
-    private final Runnable mExoProgressRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (mExoVideoView != null && mExoVideoView.isPlaying()) {
-                long curMs = mExoVideoView.getCurrentPosition();
-                long durMs = mExoVideoView.getDuration();
-                if (durMs > 0 && !mIsUserSeeking) {
-                    long curSec = curMs / 1000;
-                    long durSec = durMs / 1000;
-                    mVideoDuration = durSec;
-                    if (mTxtTimeCurrent != null) {
-                        mTxtTimeCurrent.setText(formatTime(curSec));
-                    }
-                    if (mTxtTimeTotal != null) {
-                        mTxtTimeTotal.setText(formatTime(durSec));
-                    }
-                    if (mPlayerSeekBar != null) {
-                        int progress = (int) ((curMs / (double) durMs) * 1000);
-                        mPlayerSeekBar.setProgress(progress);
-                    }
-                    if (mGestureController != null) {
-                        mGestureController.updatePlaybackTime(curSec, durSec);
-                    }
-                }
-                mHandler.postDelayed(this, 300);
-            }
-        }
-    };
-
-    private void startExoProgressTracker() {
-        mHandler.removeCallbacks(mExoProgressRunnable);
-        mHandler.post(mExoProgressRunnable);
-    }
-
-    private void stopExoProgressTracker() {
-        mHandler.removeCallbacks(mExoProgressRunnable);
-    }
-
-    public void playVideoWithExoMedia(String streamUrl) {
-        if (streamUrl == null || streamUrl.isEmpty()) return;
-        mLastStreamUrl = streamUrl;
-
-        // Pause webview video so they don't both play audio
-        executeJs("try { document.querySelectorAll('video').forEach(function(v){ v.pause(); }); } catch(e){}");
-
-        mWebView.setVisibility(View.INVISIBLE);
-        mFabSettings.setVisibility(View.GONE);
-        if (mDockVideoSniffer != null) mDockVideoSniffer.setVisibility(View.GONE);
-        if (mPillExternalPlayer != null) mPillExternalPlayer.setVisibility(View.GONE);
-
-        mFullscreenContainer.setVisibility(View.VISIBLE);
-        if (mPlayerTopBar != null) mPlayerTopBar.setVisibility(View.VISIBLE);
-        if (mPlayerBottomBar != null) mPlayerBottomBar.setVisibility(View.VISIBLE);
-
-        applyEdgeToEdgeImmersive();
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-
-        mGestureController.setCustomView(mExoVideoView);
-        mGestureController.reset();
-        mGestureController.scheduleAutoHideControls();
-
-        mExoVideoView.stop();
-        mExoVideoView.setMedia(Uri.parse(streamUrl));
-    }
-
     private void applyAspectRatio(int mode) {
-        if (mExoVideoView == null) return;
-        if (mode == 1) {
-            mExoVideoView.setScaleType(ScaleType.CENTER_CROP);
-        } else if (mode == 2) {
-            mExoVideoView.setScaleType(ScaleType.FIT_XY);
-        } else {
-            mExoVideoView.setScaleType(ScaleType.FIT_CENTER);
+        if (mVideoSurfaceHolder != null) {
+            if (mode == 1) { // Fill / Crop
+                mVideoSurfaceHolder.setScaleX(1.15f);
+                mVideoSurfaceHolder.setScaleY(1.15f);
+            } else if (mode == 2) { // Stretch
+                mVideoSurfaceHolder.setScaleX(1.30f);
+                mVideoSurfaceHolder.setScaleY(1.0f);
+            } else { // Fit
+                mVideoSurfaceHolder.setScaleX(1.0f);
+                mVideoSurfaceHolder.setScaleY(1.0f);
+            }
         }
+        String fit = mode == 1 ? "cover" : (mode == 2 ? "fill" : "contain");
+        executeJs("try { var vs = document.querySelectorAll('video'); for (var i = 0; i < vs.length; i++) vs[i].style.objectFit = '" + fit + "'; } catch(e){}" +
+                  "try { window.postMessage({ type: 'SISKA_VIDEO_RATIO', mode: " + mode + " }, '*'); } catch(e){}");
     }
 
     private void executeJs(String script) {
@@ -1351,34 +1265,174 @@ public class MainActivity extends Activity {
     }
 
     private void executeVideoSeek(int secondsDelta) {
-        if (mExoVideoView != null) {
-            long cur = mExoVideoView.getCurrentPosition();
-            long dur = mExoVideoView.getDuration();
-            long target = Math.max(0, cur + (secondsDelta * 1000L));
-            if (dur > 0) target = Math.min(dur, target);
-            mExoVideoView.seekTo(target);
-        }
+        seekVideoDelta(secondsDelta);
     }
 
     private void executeVideoPlaybackState(boolean shouldPlay) {
-        if (mExoVideoView != null) {
-            if (shouldPlay) {
-                mExoVideoView.start();
-                startExoProgressTracker();
-            } else {
-                mExoVideoView.pause();
-                stopExoProgressTracker();
-            }
-            if (mBtnPlayPause != null) {
-                mBtnPlayPause.setText(shouldPlay ? "⏸" : "▶");
-            }
-        }
+        setVideoPlayState(shouldPlay);
     }
 
     private void executeVideoSpeed(float speed) {
-        if (mExoVideoView != null) {
-            mExoVideoView.setPlaybackSpeed(speed);
+        setVideoSpeed(speed);
+    }
+
+    private void seekVideoDelta(int secondsDelta) {
+        String script =
+            "(function(delta) {" +
+            "  function seek(win) {" +
+            "    if (!win) return;" +
+            "    try {" +
+            "      if (win.jwplayer) {" +
+            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
+            "        if (p && typeof p.seek === 'function' && typeof p.getPosition === 'function') {" +
+            "          var cur = p.getPosition() || 0;" +
+            "          var dur = (typeof p.getDuration === 'function' ? p.getDuration() : 999999) || 999999;" +
+            "          p.seek(Math.max(0, Math.min(dur, cur + delta)));" +
+            "        }" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var vs = win.document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) {" +
+            "        var v = vs[i];" +
+            "        var target = Math.max(0, v.currentTime + delta);" +
+            "        if (v.duration) target = Math.min(v.duration, target);" +
+            "        v.currentTime = target;" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try { win.postMessage({ type: 'SISKA_VIDEO_SEEK_DELTA', delta: delta }, '*'); } catch(e) {}" +
+            "    try {" +
+            "      for (var j = 0; j < win.frames.length; j++) seek(win.frames[j]);" +
+            "    } catch(e) {}" +
+            "  }" +
+            "  seek(window);" +
+            "})(" + secondsDelta + ");";
+        executeJs(script);
+
+        // Also dispatch hardware key event directly to Chromium fullscreen custom view
+        if (mCustomView != null) {
+            int keyCode = secondsDelta > 0 ? KeyEvent.KEYCODE_DPAD_RIGHT : KeyEvent.KEYCODE_DPAD_LEFT;
+            mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
+            mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
         }
+    }
+
+    private void seekVideoTo(double targetSeconds) {
+        String script =
+            "(function(target) {" +
+            "  function seek(win) {" +
+            "    if (!win) return;" +
+            "    try {" +
+            "      if (win.jwplayer) {" +
+            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
+            "        if (p && typeof p.seek === 'function') p.seek(target);" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var vs = win.document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) vs[i].currentTime = target;" +
+            "    } catch(e) {}" +
+            "    try { win.postMessage({ type: 'SISKA_VIDEO_SEEK_TO', target: target }, '*'); } catch(e) {}" +
+            "    try {" +
+            "      for (var j = 0; j < win.frames.length; j++) seek(win.frames[j]);" +
+            "    } catch(e) {}" +
+            "  }" +
+            "  seek(window);" +
+            "})(" + targetSeconds + ");";
+        executeJs(script);
+    }
+
+    private void seekVideoRatio(double ratio) {
+        String script =
+            "(function(r) {" +
+            "  function seek(win) {" +
+            "    if (!win) return;" +
+            "    try {" +
+            "      if (win.jwplayer) {" +
+            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
+            "        if (p && typeof p.seek === 'function') {" +
+            "          var dur = (typeof p.getDuration === 'function' ? p.getDuration() : 0) || 0;" +
+            "          if (dur > 0) p.seek(dur * r);" +
+            "        }" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var vs = win.document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) {" +
+            "        var v = vs[i];" +
+            "        if (v.duration && v.duration > 0) v.currentTime = v.duration * r;" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try { win.postMessage({ type: 'SISKA_VIDEO_SEEK_RATIO', ratio: r }, '*'); } catch(e) {}" +
+            "    try {" +
+            "      for (var j = 0; j < win.frames.length; j++) seek(win.frames[j]);" +
+            "    } catch(e) {}" +
+            "  }" +
+            "  seek(window);" +
+            "})(" + ratio + ");";
+        executeJs(script);
+    }
+
+    private void setVideoPlayState(boolean shouldPlay) {
+        String script =
+            "(function(play) {" +
+            "  function apply(win) {" +
+            "    if (!win) return;" +
+            "    try {" +
+            "      if (win.jwplayer) {" +
+            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
+            "        if (p) { if (play) p.play(); else p.pause(); }" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var vs = win.document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) {" +
+            "        if (play) { var pr = vs[i].play(); if (pr !== undefined) pr.catch(function(e){}); }" +
+            "        else vs[i].pause();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try { win.postMessage({ type: 'SISKA_VIDEO_SET_PLAY', play: play }, '*'); } catch(e) {}" +
+            "    try {" +
+            "      for (var j = 0; j < win.frames.length; j++) apply(win.frames[j]);" +
+            "    } catch(e) {}" +
+            "  }" +
+            "  apply(window);" +
+            "})(" + shouldPlay + ");";
+        executeJs(script);
+
+        if (mCustomView != null) {
+            mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
+            mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE));
+        }
+
+        if (mBtnPlayPause != null) {
+            mBtnPlayPause.setText(shouldPlay ? "⏸" : "▶");
+        }
+    }
+
+    private void setVideoSpeed(float speed) {
+        String script =
+            "(function(spd) {" +
+            "  function apply(win) {" +
+            "    if (!win) return;" +
+            "    try {" +
+            "      if (win.jwplayer) {" +
+            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
+            "        if (p && typeof p.setPlaybackRate === 'function') p.setPlaybackRate(spd);" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var vs = win.document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) vs[i].playbackRate = spd;" +
+            "    } catch(e) {}" +
+            "    try { win.postMessage({ type: 'SISKA_VIDEO_SPEED', speed: spd }, '*'); } catch(e) {}" +
+            "    try {" +
+            "      for (var j = 0; j < win.frames.length; j++) apply(win.frames[j]);" +
+            "    } catch(e) {}" +
+            "  }" +
+            "  apply(window);" +
+            "})(" + speed + ");";
+        executeJs(script);
     }
 
     private boolean isAdOrTracker(String url) {
@@ -1655,15 +1709,16 @@ public class MainActivity extends Activity {
                 mCustomViewCallback = callback;
                 mOriginalOrientation = getRequestedOrientation();
 
-                if (mLastStreamUrl != null && !mLastStreamUrl.isEmpty()) {
-                    playVideoWithExoMedia(mLastStreamUrl);
-                    return;
-                }
-
                 // Keep WebView INVISIBLE (not GONE) so Chromium preserves active JavaScript timers & events!
                 mWebView.setVisibility(View.INVISIBLE);
                 mFabSettings.setVisibility(View.GONE); // Hide FAB in fullscreen video
                 mFullscreenContainer.setVisibility(View.VISIBLE);
+
+                mVideoSurfaceHolder.removeAllViews();
+                mVideoSurfaceHolder.addView(view, new FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                ));
 
                 if (mPillExternalPlayer != null) {
                     mPillExternalPlayer.setVisibility(View.GONE);
@@ -1685,9 +1740,10 @@ public class MainActivity extends Activity {
                 applyEdgeToEdgeImmersive();
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
-                mGestureController.setCustomView(mExoVideoView);
+                mGestureController.setCustomView(view);
                 mGestureController.reset();
                 mGestureController.scheduleAutoHideControls();
+                injectVideoSyncScript(mWebView);
             }
 
             @Override
@@ -1698,15 +1754,11 @@ public class MainActivity extends Activity {
     }
 
     private void exitFullscreenVideo() {
-        if (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE) return;
+        if (mCustomView == null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) return;
 
-        stopExoProgressTracker();
         mIsUserSeeking = false;
 
-        if (mExoVideoView != null) {
-            mExoVideoView.stop();
-        }
-
+        mVideoSurfaceHolder.removeAllViews();
         mFullscreenContainer.setVisibility(View.GONE);
         mFabSettings.setVisibility(View.VISIBLE); // Restore FAB
         mWebView.setVisibility(View.VISIBLE);
@@ -1962,13 +2014,6 @@ public class MainActivity extends Activity {
         if (mGestureController != null) {
             mGestureController.restoreDefaultBrightness();
         }
-        if (mExoVideoView != null && mExoVideoView.isPlaying()) {
-            mExoVideoView.pause();
-            stopExoProgressTracker();
-            if (mBtnPlayPause != null) {
-                mBtnPlayPause.setText("▶");
-            }
-        }
         if (mWebView != null) {
             mWebView.onPause();
             mWebView.pauseTimers();
@@ -2025,12 +2070,7 @@ public class MainActivity extends Activity {
             if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
         } catch (Exception ignored) {}
         mHandler.removeCallbacks(mClockUpdateRunnable);
-        stopExoProgressTracker();
         AppUpdateManager.stopPeriodicUpdateChecker();
-        if (mExoVideoView != null) {
-            mExoVideoView.release();
-            mExoVideoView = null;
-        }
         if (mWebView != null) {
             mWebView.destroy();
             mWebView = null;
@@ -2062,6 +2102,7 @@ public class MainActivity extends Activity {
                 }
                 if (mGestureController != null) {
                     mGestureController.updatePlaybackTime((long) currentSec, (long) mVideoDuration);
+                    mGestureController.updatePlaybackState(isPlaying);
                 }
             }
         });
@@ -2077,84 +2118,6 @@ public class MainActivity extends Activity {
         } else {
             return String.format(Locale.getDefault(), "%02d:%02d", m, s);
         }
-    }
-
-    private void seekVideoTo(double targetSeconds) {
-        String script =
-            "(function(target) {" +
-            "  function seek(win) {" +
-            "    if (!win) return;" +
-            "    try {" +
-            "      if (win.jwplayer) {" +
-            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
-            "        if (p && typeof p.seek === 'function') p.seek(target);" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
-            "      for (var i = 0; i < vs.length; i++) {" +
-            "        vs[i].currentTime = target;" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      win.postMessage({ type: 'SISKA_VIDEO_SEEK_TO', target: target }, '*');" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var iframes = win.document.querySelectorAll('iframe');" +
-            "      for (var k = 0; k < iframes.length; k++) {" +
-            "        try { iframes[k].contentWindow.postMessage({ type: 'SISKA_VIDEO_SEEK_TO', target: target }, '*'); } catch(e) {}" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) {" +
-            "        try { win.frames[j].postMessage({ type: 'SISKA_VIDEO_SEEK_TO', target: target }, '*'); } catch(e) {}" +
-            "      }" +
-            "    } catch(e) {}" +
-            "  }" +
-            "  seek(window);" +
-            "})(" + targetSeconds + ");";
-        executeJs(script);
-    }
-
-    private void seekVideoRatio(double ratio) {
-        String script =
-            "(function(r) {" +
-            "  function applyRatio(win) {" +
-            "    if (!win) return;" +
-            "    try {" +
-            "      if (win.jwplayer) {" +
-            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
-            "        if (p && typeof p.seek === 'function') {" +
-            "          var dur = (typeof p.getDuration === 'function' ? p.getDuration() : 0) || 0;" +
-            "          if (dur > 0) p.seek(dur * r);" +
-            "        }" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
-            "      for (var i = 0; i < vs.length; i++) {" +
-            "        var v = vs[i];" +
-            "        if (v.duration && v.duration > 0) { v.currentTime = v.duration * r; }" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      win.postMessage({ type: 'SISKA_VIDEO_SEEK_RATIO', ratio: r }, '*');" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var iframes = win.document.querySelectorAll('iframe');" +
-            "      for (var k = 0; k < iframes.length; k++) {" +
-            "        try { iframes[k].contentWindow.postMessage({ type: 'SISKA_VIDEO_SEEK_RATIO', ratio: r }, '*'); } catch(e) {}" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) {" +
-            "        try { win.frames[j].postMessage({ type: 'SISKA_VIDEO_SEEK_RATIO', ratio: r }, '*'); } catch(e) {}" +
-            "      }" +
-            "    } catch(e) {}" +
-            "  }" +
-            "  applyRatio(window);" +
-            "})(" + ratio + ");";
-        executeJs(script);
     }
 
     private void triggerFullscreenVideo() {
@@ -2182,6 +2145,12 @@ public class MainActivity extends Activity {
             "        if (reqFs(win.frames[j])) return true;" +
             "      }" +
             "    } catch(e) {}" +
+            "    try {" +
+            "      var iframes = win.document.querySelectorAll('iframe');" +
+            "      for (var k = 0; k < iframes.length; k++) {" +
+            "        try { if (iframes[k].contentWindow && reqFs(iframes[k].contentWindow)) return true; } catch(e) {}" +
+            "      }" +
+            "    } catch(e) {}" +
             "    return false;" +
             "  }" +
             "  reqFs(window);" +
@@ -2194,13 +2163,51 @@ public class MainActivity extends Activity {
             "(function() {" +
             "  if (window.__siska_sync_injected) return;" +
             "  window.__siska_sync_injected = true;" +
+            "  function sendUpdate(cur, dur, playing) {" +
+            "    if (dur > 0 && window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
+            "      window.AndroidBridge.onVideoTimeUpdate(cur, dur, playing);" +
+            "    }" +
+            "  }" +
             "  window.addEventListener('message', function(e) {" +
             "    if (e.data && e.data.type === 'SISKA_VIDEO_TIME_UPDATE') {" +
-            "      if (window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
-            "        window.AndroidBridge.onVideoTimeUpdate(e.data.current, e.data.duration, e.data.playing);" +
-            "      }" +
+            "      sendUpdate(e.data.current, e.data.duration, e.data.playing);" +
             "    }" +
             "  });" +
+            "  function hookVideo(v) {" +
+            "    if (!v || v.__siska_hooked) return;" +
+            "    v.__siska_hooked = true;" +
+            "    var evts = ['timeupdate', 'play', 'pause', 'seeking', 'seeked', 'durationchange'];" +
+            "    for (var i = 0; i < evts.length; i++) {" +
+            "      v.addEventListener(evts[i], function() {" +
+            "        if (v.duration && v.duration > 0) {" +
+            "          sendUpdate(v.currentTime || 0, v.duration, !v.paused);" +
+            "        }" +
+            "      });" +
+            "    }" +
+            "  }" +
+            "  function hookAll() {" +
+            "    try {" +
+            "      var vs = document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) hookVideo(vs[i]);" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      if (window.jwplayer) {" +
+            "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
+            "        if (p && typeof p.on === 'function' && !p.__siska_hooked) {" +
+            "          p.__siska_hooked = true;" +
+            "          p.on('time', function(e) { sendUpdate(e.position, e.duration, true); });" +
+            "          p.on('play', function() { sendUpdate(p.getPosition() || 0, p.getDuration() || 0, true); });" +
+            "          p.on('pause', function() { sendUpdate(p.getPosition() || 0, p.getDuration() || 0, false); });" +
+            "          p.on('seek', function(e) { sendUpdate(e.offset || 0, p.getDuration() || 0, true); });" +
+            "        }" +
+            "      }" +
+            "    } catch(e) {}" +
+            "  }" +
+            "  hookAll();" +
+            "  try {" +
+            "    var obs = new MutationObserver(function() { hookAll(); });" +
+            "    obs.observe(document.documentElement || document.body, { childList: true, subtree: true });" +
+            "  } catch(e) {}" +
             "  setInterval(function() {" +
             "    try {" +
             "      var cur = 0, dur = 0, playing = false;" +
@@ -2223,11 +2230,9 @@ public class MainActivity extends Activity {
             "          }" +
             "        }" +
             "      }" +
-            "      if (dur > 0 && window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
-            "        window.AndroidBridge.onVideoTimeUpdate(cur, dur, playing);" +
-            "      }" +
+            "      sendUpdate(cur, dur, playing);" +
             "    } catch(e) {}" +
-            "  }, 500);" +
+            "  }, 350);" +
             "})();";
         executeJs(script);
     }
