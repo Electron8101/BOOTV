@@ -45,6 +45,7 @@ aapt2 link build/resources.zip $EXTRA_RES_ARG \
   --manifest AndroidManifest.xml \
   --java build/gen \
   --custom-package tv.bootv.app \
+  --extra-packages com.devbrackets.android.exomedia:androidx.media3.exoplayer:androidx.media3.common \
   -o build/unaligned.apk \
   --auto-add-overlay
 
