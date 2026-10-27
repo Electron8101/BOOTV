@@ -1,22 +1,261 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/dark_bg">
+    android:background="@color/yt_dark_bg">
 
+    <!-- ========================================== -->
+    <!-- 1. YOUTUBE TOP APP BAR (When Browsing)    -->
+    <!-- ========================================== -->
+    <LinearLayout
+        android:id="@+id/yt_app_header"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:background="@color/yt_dark_bg"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingLeft="14dp"
+        android:paddingRight="14dp">
+
+        <!-- Left: YouTube-Style BOOTV Brand -->
+        <LinearLayout
+            android:id="@+id/header_brand"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Red Play Icon Badge -->
+            <TextView
+                android:layout_width="28dp"
+                android:layout_height="22dp"
+                android:text="▶"
+                android:textColor="@color/white"
+                android:textSize="11sp"
+                android:gravity="center"
+                android:background="@drawable/yt_logo_badge"
+                android:layout_marginRight="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="BOOTV"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="-0.02" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PRO"
+                android:textColor="@color/yt_red"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
+                android:layout_marginLeft="4dp"
+                android:layout_marginTop="-6dp" />
+        </LinearLayout>
+
+        <!-- Search Input Box (Hidden until 🔍 is tapped) -->
+        <LinearLayout
+            android:id="@+id/layout_search_box"
+            android:layout_width="0dp"
+            android:layout_height="36dp"
+            android:layout_weight="1"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="6dp"
+            android:background="@drawable/yt_input_search"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <EditText
+                android:id="@+id/edit_search_input"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:hint="Search videos, movies, anime..."
+                android:textColorHint="@color/yt_text_secondary"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="13sp"
+                android:background="@null"
+                android:imeOptions="actionSearch"
+                android:singleLine="true" />
+
+            <TextView
+                android:id="@+id/btn_search_submit"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:text="➔"
+                android:textColor="@color/yt_red"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:gravity="center" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- Header Action Icons -->
+        <TextView
+            android:id="@+id/btn_header_cast"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:text="📺"
+            android:textColor="@color/yt_text_primary"
+            android:textSize="17sp"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/btn_header_search"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:text="🔍"
+            android:textColor="@color/yt_text_primary"
+            android:textSize="17sp"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <TextView
+            android:id="@+id/btn_header_profile"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:text="👤"
+            android:textColor="@color/yt_text_primary"
+            android:textSize="15sp"
+            android:gravity="center"
+            android:background="@drawable/btn_close_circle"
+            android:layout_marginLeft="6dp"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
+
+    <!-- ========================================== -->
+    <!-- 2. HORIZONTAL CATEGORY CHIPS BAR          -->
+    <!-- ========================================== -->
+    <HorizontalScrollView
+        android:id="@+id/yt_chips_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_below="@+id/yt_app_header"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:background="@color/yt_dark_bg">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/chip_all"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="All"
+                android:textColor="@color/yt_chip_selected_text"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/yt_chip_active"
+                android:layout_marginRight="8dp" />
+
+            <TextView
+                android:id="@+id/chip_trending"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Trending"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/yt_chip_inactive"
+                android:layout_marginRight="8dp" />
+
+            <TextView
+                android:id="@+id/chip_movies"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Movies"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/yt_chip_inactive"
+                android:layout_marginRight="8dp" />
+
+            <TextView
+                android:id="@+id/chip_series"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Series"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/yt_chip_inactive"
+                android:layout_marginRight="8dp" />
+
+            <TextView
+                android:id="@+id/chip_anime"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Anime"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/yt_chip_inactive"
+                android:layout_marginRight="8dp" />
+
+            <TextView
+                android:id="@+id/chip_action"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Action"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/yt_chip_inactive"
+                android:layout_marginRight="8dp" />
+
+            <TextView
+                android:id="@+id/chip_recently"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:text="Recently Added"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="12sp"
+                android:gravity="center"
+                android:background="@drawable/yt_chip_inactive"
+                android:layout_marginRight="12dp" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- ========================================== -->
+    <!-- 3. WEBVIEW CONTENT VIEWPORT               -->
+    <!-- ========================================== -->
     <WebView
         android:id="@+id/webview"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_below="@+id/yt_chips_scroll"
+        android:layout_above="@+id/mini_player_container" />
 
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="4dp"
-        android:layout_alignParentTop="true"
+        android:layout_height="3dp"
+        android:layout_below="@+id/yt_chips_scroll"
+        android:progressDrawable="@drawable/yt_seekbar_progress"
         android:indeterminate="true"
         android:visibility="gone" />
 
@@ -56,8 +295,8 @@
         android:layout_height="52dp"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-        android:layout_marginBottom="28dp"
-        android:layout_marginRight="20dp"
+        android:layout_marginBottom="62dp"
+        android:layout_marginRight="18dp"
         android:background="@drawable/fab_background"
         android:alpha="0.6"
         android:clickable="true"
@@ -69,17 +308,17 @@
             android:layout_gravity="center"
             android:text="⚙"
             android:textColor="@color/white"
-            android:textSize="26sp" />
+            android:textSize="24sp" />
     </FrameLayout>
 
-    <!-- Lower Semi-Transparent Launch Signature Popup -->
+    <!-- Bootloop Launch Signature Popup -->
     <LinearLayout
         android:id="@+id/popup_bootloop"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
+        android:layout_above="@+id/mini_player_container"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="42dp"
+        android:layout_marginBottom="18dp"
         android:orientation="vertical"
         android:gravity="center"
         android:background="@drawable/popup_bootloop"
@@ -96,14 +335,243 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="BOOTV Beta v2.4"
-            android:textColor="@color/neon_cyan"
+            android:text="BOOTV YouTube Pro Edition"
+            android:textColor="@color/yt_red"
             android:textSize="10sp"
             android:textStyle="bold"
             android:layout_marginTop="2dp" />
     </LinearLayout>
 
-    <!-- Fullscreen Video Container with Notch & Gesture Support -->
+    <!-- ========================================== -->
+    <!-- 4. IN-APP DOCKED MINI-PLAYER              -->
+    <!-- ========================================== -->
+    <RelativeLayout
+        android:id="@+id/mini_player_container"
+        android:layout_width="match_parent"
+        android:layout_height="62dp"
+        android:layout_above="@+id/yt_bottom_nav"
+        android:background="@drawable/yt_miniplayer_bg"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <!-- 16:9 Mini Video Surface Preview Holder -->
+        <FrameLayout
+            android:id="@+id/mini_video_surface"
+            android:layout_width="94dp"
+            android:layout_height="match_parent"
+            android:layout_alignParentLeft="true"
+            android:layout_margin="3dp"
+            android:background="@color/black" />
+
+        <!-- Title & Subtitle Info -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/mini_video_surface"
+            android:layout_toLeftOf="@+id/mini_controls"
+            android:layout_centerVertical="true"
+            android:orientation="vertical"
+            android:paddingLeft="10dp"
+            android:paddingRight="6dp">
+
+            <TextView
+                android:id="@+id/txt_mini_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Playing Stream"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:ellipsize="marquee" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Tap to expand player"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="11sp"
+                android:singleLine="true"
+                android:layout_marginTop="1dp" />
+        </LinearLayout>
+
+        <!-- Mini Controls (Play/Pause & Dismiss) -->
+        <LinearLayout
+            android:id="@+id/mini_controls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal"
+            android:layout_marginRight="8dp">
+
+            <TextView
+                android:id="@+id/btn_mini_play_pause"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:text="▶"
+                android:textColor="@color/yt_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <TextView
+                android:id="@+id/btn_mini_close"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:text="✕"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="15sp"
+                android:gravity="center"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+
+        <!-- Red Micro Scrubber at bottom of mini card -->
+        <ProgressBar
+            android:id="@+id/pb_mini_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="2.5dp"
+            android:layout_alignParentBottom="true"
+            android:max="1000"
+            android:progress="0"
+            android:progressDrawable="@drawable/yt_seekbar_progress" />
+    </RelativeLayout>
+
+    <!-- ========================================== -->
+    <!-- 5. YOUTUBE 4-TAB BOTTOM NAVIGATION BAR    -->
+    <!-- ========================================== -->
+    <LinearLayout
+        android:id="@+id/yt_bottom_nav"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_alignParentBottom="true"
+        android:background="@drawable/yt_bottom_nav_bg"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Tab 1: Home -->
+        <LinearLayout
+            android:id="@+id/tab_home"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⌂"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txt_tab_home"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Home"
+                android:textColor="@color/white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:layout_marginTop="1dp" />
+        </LinearLayout>
+
+        <!-- Tab 2: Trending -->
+        <LinearLayout
+            android:id="@+id/tab_trending"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚡"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/txt_tab_trending"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Trending"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="10sp"
+                android:layout_marginTop="1dp" />
+        </LinearLayout>
+
+        <!-- Tab 3: Library -->
+        <LinearLayout
+            android:id="@+id/tab_library"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📁"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/txt_tab_library"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Library"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="10sp"
+                android:layout_marginTop="1dp" />
+        </LinearLayout>
+
+        <!-- Tab 4: You -->
+        <LinearLayout
+            android:id="@+id/tab_you"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👤"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/txt_tab_you"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="You"
+                android:textColor="@color/yt_text_secondary"
+                android:textSize="10sp"
+                android:layout_marginTop="1dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ========================================== -->
+    <!-- 6. FULLSCREEN YOUTUBE VIDEO CONTAINER      -->
+    <!-- ========================================== -->
     <FrameLayout
         android:id="@+id/fullscreen_container"
         android:layout_width="match_parent"
@@ -111,7 +579,7 @@
         android:background="@color/black"
         android:visibility="gone">
 
-        <!-- Video Surface Holder (where WebView CustomView is attached) -->
+        <!-- Video Surface Holder (where WebChromeClient attaches custom view) -->
         <FrameLayout
             android:id="@+id/video_surface_holder"
             android:layout_width="match_parent"
@@ -124,7 +592,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Material 3 Top Header App Bar -->
+        <!-- YouTube Top Header Bar -->
         <LinearLayout
             android:id="@+id/player_top_bar"
             android:layout_width="match_parent"
@@ -135,33 +603,31 @@
             android:paddingLeft="16dp"
             android:paddingRight="16dp"
             android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:background="@drawable/m3_panel_top"
-            android:layout_margin="12dp"
+            android:paddingBottom="24dp"
+            android:background="@drawable/yt_panel_top"
             android:clickable="true"
             android:focusable="true">
 
+            <!-- YouTube Down Arrow Minimize Button -->
             <TextView
                 android:id="@+id/btn_player_close"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="✕ Close"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:text="∨"
                 android:textColor="@color/white"
-                android:textSize="12sp"
+                android:textSize="22sp"
                 android:textStyle="bold"
-                android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:background="@drawable/m3_btn_tonal"
-                android:paddingLeft="14dp"
-                android:paddingRight="14dp" />
+                android:clickable="true"
+                android:focusable="true" />
 
-            <!-- Title / Channel info -->
+            <!-- Title & Channel info -->
             <TextView
                 android:id="@+id/txt_player_title"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginLeft="14dp"
+                android:layout_marginLeft="10dp"
                 android:layout_marginRight="10dp"
                 android:text="BOOTV Player"
                 android:textColor="@color/white"
@@ -175,7 +641,7 @@
             <TextView
                 android:id="@+id/txt_player_quality"
                 android:layout_width="wrap_content"
-                android:layout_height="28dp"
+                android:layout_height="26dp"
                 android:text="HD"
                 android:textColor="@color/white"
                 android:textSize="10sp"
@@ -186,15 +652,15 @@
                 android:paddingRight="8dp"
                 android:layout_marginRight="8dp" />
 
-            <!-- Signature Soul/Material Status Chip (Clock & Battery) -->
+            <!-- Clock & Battery Status Chip -->
             <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="32dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:background="@drawable/m3_chip"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
                 android:layout_marginRight="8dp">
 
                 <TextView
@@ -203,7 +669,7 @@
                     android:layout_height="wrap_content"
                     android:text="12:00"
                     android:textColor="@color/white"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:fontFamily="sans-serif-medium"
                     android:textStyle="bold" />
 
@@ -215,53 +681,109 @@
                     android:textColor="@color/neon_cyan"
                     android:textSize="11sp"
                     android:fontFamily="sans-serif-medium"
-                    android:layout_marginLeft="6dp" />
+                    android:layout_marginLeft="4dp" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/btn_aspect_ratio"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="32dp"
                 android:text="⤢ Fit"
                 android:textColor="@color/white"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center"
                 android:background="@drawable/m3_chip"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
                 android:layout_marginRight="8dp" />
 
             <TextView
                 android:id="@+id/btn_pip"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="32dp"
                 android:text="❐ PiP"
                 android:textColor="@color/white"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center"
                 android:background="@drawable/m3_chip"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
                 android:layout_marginRight="8dp" />
 
             <TextView
                 android:id="@+id/btn_lock"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="32dp"
                 android:text="🔓 Lock"
                 android:textColor="@color/white"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center"
                 android:background="@drawable/m3_chip"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp" />
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp" />
         </LinearLayout>
 
-        <!-- Left Double-Tap Seek Zone (Curved Ripple Overlay - Hossain Shifat player style) -->
+        <!-- ========================================== -->
+        <!-- YOUTUBE CENTER PLAYBACK CONTROLS OVERLAY   -->
+        <!-- ========================================== -->
+        <LinearLayout
+            android:id="@+id/yt_center_controls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <!-- Rewind 10s -->
+            <TextView
+                android:id="@+id/btn_rewind_10"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:text="↺\n10"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/yt_btn_center_skip"
+                android:layout_marginRight="28dp"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!-- Large Center Play / Pause -->
+            <TextView
+                android:id="@+id/btn_play_pause"
+                android:layout_width="68dp"
+                android:layout_height="68dp"
+                android:text="▶"
+                android:textColor="@color/white"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/yt_btn_center_play"
+                android:clickable="true"
+                android:focusable="true" />
+
+            <!-- Forward 10s -->
+            <TextView
+                android:id="@+id/btn_forward_10"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:text="↻\n10"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/yt_btn_center_skip"
+                android:layout_marginLeft="28dp"
+                android:clickable="true"
+                android:focusable="true" />
+        </LinearLayout>
+
+        <!-- Left Double-Tap Seek Zone -->
         <FrameLayout
             android:id="@+id/seek_zone_left"
             android:layout_width="140dp"
@@ -295,7 +817,7 @@
             </LinearLayout>
         </FrameLayout>
 
-        <!-- Right Double-Tap Seek Zone (Curved Ripple Overlay - Hossain Shifat player style) -->
+        <!-- Right Double-Tap Seek Zone -->
         <FrameLayout
             android:id="@+id/seek_zone_right"
             android:layout_width="140dp"
@@ -329,13 +851,13 @@
             </LinearLayout>
         </FrameLayout>
 
-        <!-- Speed Boost Badge (Top Pill - Hossain Shifat player style) -->
+        <!-- Long-Press 2x Speed Boost Badge -->
         <LinearLayout
             android:id="@+id/badge_speed_boost"
             android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_height="34dp"
             android:layout_gravity="top|center_horizontal"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="20dp"
             android:background="@drawable/m3_speed_badge"
             android:paddingLeft="16dp"
             android:paddingRight="16dp"
@@ -347,12 +869,12 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⚡ 2.0x Speed Playing"
-                android:textColor="@color/neon_cyan"
+                android:textColor="@color/yt_red"
                 android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Glassmorphic Vertical Brightness Capsule BarPill (Left) -->
+        <!-- Vertical Brightness Bar (Left) -->
         <LinearLayout
             android:id="@+id/hud_brightness"
             android:layout_width="66dp"
@@ -403,7 +925,7 @@
                 android:fontFamily="monospace" />
         </LinearLayout>
 
-        <!-- Glassmorphic Vertical Volume Capsule BarPill (Right) -->
+        <!-- Vertical Volume Bar (Right) -->
         <LinearLayout
             android:id="@+id/hud_volume"
             android:layout_width="66dp"
@@ -455,7 +977,7 @@
                 android:fontFamily="monospace" />
         </LinearLayout>
 
-        <!-- Fast Forward / Rewind Seek HUD (Center - Hossain Shifat player style) -->
+        <!-- Fast Forward / Rewind Seek HUD -->
         <LinearLayout
             android:id="@+id/hud_seek"
             android:layout_width="wrap_content"
@@ -486,7 +1008,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="[+00:00]"
-                android:textColor="@color/neon_cyan"
+                android:textColor="@color/yt_red"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-medium"
@@ -510,7 +1032,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="110dp"
+            android:layout_marginBottom="90dp"
             android:text="Action"
             android:textColor="@color/white"
             android:textSize="14sp"
@@ -522,7 +1044,9 @@
             android:paddingBottom="8dp"
             android:visibility="gone" />
 
-        <!-- Material 3 Bottom Timeline & Media Controls Bar -->
+        <!-- ========================================== -->
+        <!-- YOUTUBE BOTTOM SCRUBBER & TIMELINE BAR     -->
+        <!-- ========================================== -->
         <LinearLayout
             android:id="@+id/player_bottom_bar"
             android:layout_width="match_parent"
@@ -531,20 +1055,18 @@
             android:orientation="vertical"
             android:paddingLeft="16dp"
             android:paddingRight="16dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:background="@drawable/m3_panel_bottom"
-            android:layout_margin="12dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="14dp"
+            android:background="@drawable/yt_panel_bottom"
             android:clickable="true"
             android:focusable="true">
 
-            <!-- Material Slider / Timeline Row -->
+            <!-- Scrubber Row: [Time Current] =====[Thumb]===== [Time Total] [Actions] -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="8dp">
+                android:gravity="center_vertical">
 
                 <TextView
                     android:id="@+id/txt_time_current"
@@ -559,114 +1081,65 @@
                 <SeekBar
                     android:id="@+id/player_seekbar"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="36dp"
                     android:layout_weight="1"
                     android:max="1000"
                     android:progress="0"
                     android:splitTrack="false"
-                    android:progressDrawable="@drawable/m3_seekbar_progress"
-                    android:thumb="@drawable/m3_seekbar_thumb"
-                    android:paddingLeft="14dp"
-                    android:paddingRight="14dp" />
+                    android:progressDrawable="@drawable/yt_seekbar_progress"
+                    android:thumb="@drawable/yt_seekbar_thumb"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
 
                 <TextView
                     android:id="@+id/txt_time_total"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="00:00"
-                    android:textColor="@color/m3_secondary_text"
+                    android:textColor="@color/yt_text_secondary"
                     android:fontFamily="sans-serif-medium"
-                    android:textSize="12sp" />
-            </LinearLayout>
-
-            <!-- Material Playback Controls Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:id="@+id/btn_rewind_10"
-                    android:layout_width="wrap_content"
-                    android:layout_height="38dp"
-                    android:text="↺ 10s"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:gravity="center"
-                    android:background="@drawable/m3_btn_tonal"
-                    android:paddingLeft="14dp"
-                    android:paddingRight="14dp"
+                    android:textSize="12sp"
                     android:layout_marginRight="10dp" />
-
-                <TextView
-                    android:id="@+id/btn_play_pause"
-                    android:layout_width="48dp"
-                    android:layout_height="44dp"
-                    android:text="▶"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:gravity="center"
-                    android:background="@drawable/m3_btn_play_pause"
-                    android:layout_marginRight="10dp" />
-
-                <TextView
-                    android:id="@+id/btn_forward_10"
-                    android:layout_width="wrap_content"
-                    android:layout_height="38dp"
-                    android:text="↻ 10s"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:fontFamily="sans-serif-medium"
-                    android:gravity="center"
-                    android:background="@drawable/m3_btn_tonal"
-                    android:paddingLeft="14dp"
-                    android:paddingRight="14dp" />
-
-                <View
-                    android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
 
                 <TextView
                     android:id="@+id/btn_speed"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
+                    android:layout_height="28dp"
                     android:text="⚡ 1.0x"
                     android:textColor="@color/white"
-                    android:textSize="12sp"
+                    android:textSize="11sp"
                     android:fontFamily="sans-serif-medium"
                     android:gravity="center"
                     android:background="@drawable/m3_chip"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp"
                     android:layout_marginRight="8dp" />
 
                 <TextView
                     android:id="@+id/btn_fullscreen_ext_player"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
-                    android:text="📺 External"
-                    android:textColor="@color/neon_cyan"
-                    android:textSize="12sp"
+                    android:layout_height="28dp"
+                    android:text="📺 VLC"
+                    android:textColor="@color/yt_red"
+                    android:textSize="11sp"
                     android:textStyle="bold"
                     android:fontFamily="sans-serif-medium"
                     android:gravity="center"
                     android:background="@drawable/m3_chip"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp" />
+                    android:paddingLeft="10dp"
+                    android:paddingRight="10dp" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
 
-    <!-- Custom In-App Keypad & Author Lock Overlay -->
+    <!-- ========================================== -->
+    <!-- 7. SECURITY KEYPAD & PIN LOCK OVERLAY      -->
+    <!-- ========================================== -->
     <RelativeLayout
         android:id="@+id/lock_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/dark_bg"
+        android:background="@color/yt_dark_bg"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone">
@@ -693,7 +1166,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="CREATED BY BOOTLOOP"
-                android:textColor="@color/accent_red"
+                android:textColor="@color/yt_red"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.04"
@@ -898,13 +1371,13 @@
                         android:background="@drawable/btn_keypad"
                         android:layout_margin="6dp" />
                 </TableRow>
-
             </TableLayout>
-
         </LinearLayout>
     </RelativeLayout>
 
-    <!-- Mandatory Update Lockout Screen -->
+    <!-- ========================================== -->
+    <!-- 8. MANDATORY OTA UPDATE LOCKOUT SCREEN     -->
+    <!-- ========================================== -->
     <RelativeLayout
         android:id="@+id/layout_update_lockout"
         android:layout_width="match_parent"
@@ -932,7 +1405,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="⚠️ UPDATE REQUIRED"
-                android:textColor="@color/accent_red"
+                android:textColor="@color/yt_red"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.08"

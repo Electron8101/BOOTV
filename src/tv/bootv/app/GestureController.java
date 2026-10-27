@@ -22,6 +22,7 @@ public class GestureController {
         void onPlaybackControl(boolean shouldPlay);
         void onSpeedChange(float speed);
         void onAspectRatioChange(int mode);
+        void onMinimize();
     }
 
     private final Activity mActivity;
@@ -32,6 +33,7 @@ public class GestureController {
     private final View mTouchView;
     private final View mTopBar;
     private View mBottomBar;
+    private View mCenterControls;
     private final View mHudBrightness;
     private final TextView mTxtBrightness;
     private final ProgressBar mPbBrightness;
@@ -490,6 +492,10 @@ public class GestureController {
         mHandler.postDelayed(mAutoHideRunnable, 4500);
     }
 
+    public void setCenterControls(View centerControls) {
+        mCenterControls = centerControls;
+    }
+
     public void showControls() {
         if (mTopBar != null) {
             mTopBar.setAlpha(0f);
@@ -500,6 +506,11 @@ public class GestureController {
             mBottomBar.setAlpha(0f);
             mBottomBar.setVisibility(View.VISIBLE);
             mBottomBar.animate().alpha(1f).setDuration(220).start();
+        }
+        if (mCenterControls != null) {
+            mCenterControls.setAlpha(0f);
+            mCenterControls.setVisibility(View.VISIBLE);
+            mCenterControls.animate().alpha(1f).setDuration(220).start();
         }
         scheduleAutoHideControls();
     }
@@ -520,6 +531,15 @@ public class GestureController {
                 public void run() {
                     mBottomBar.setVisibility(View.GONE);
                     mBottomBar.setAlpha(1f);
+                }
+            }).start();
+        }
+        if (mCenterControls != null && mCenterControls.getVisibility() == View.VISIBLE) {
+            mCenterControls.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
+                @Override
+                public void run() {
+                    mCenterControls.setVisibility(View.GONE);
+                    mCenterControls.setAlpha(1f);
                 }
             }).start();
         }
@@ -614,6 +634,7 @@ public class GestureController {
         mHudFeedback.setVisibility(View.GONE);
         mTopBar.setVisibility(View.VISIBLE);
         if (mBottomBar != null) mBottomBar.setVisibility(View.VISIBLE);
+        if (mCenterControls != null) mCenterControls.setVisibility(View.VISIBLE);
         scheduleAutoHideControls();
     }
 }

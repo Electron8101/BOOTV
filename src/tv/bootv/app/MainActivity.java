@@ -55,6 +55,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -303,6 +304,24 @@ public class MainActivity extends Activity {
         "  } catch(e) {}" +
         "})();";
 
+    // YouTube Dark Theme CSS injected into web views
+    private static final String YOUTUBE_THEME_CSS =
+        "(function() {" +
+        "  try {" +
+        "    if (document.getElementById('__yt_theme_style')) return;" +
+        "    var style = document.createElement('style');" +
+        "    style.id = '__yt_theme_style';" +
+        "    style.innerHTML = '" +
+        "      body { background-color: #0f0f0f !important; color: #ffffff !important; } " +
+        "      a { color: #ffffff !important; text-decoration: none !important; } " +
+        "      img, video { border-radius: 8px !important; } " +
+        "      .item, .card, .thumb, .video-card { border-radius: 12px !important; background: #212121 !important; } " +
+        "      header, nav, .header, .navbar { background-color: #0f0f0f !important; border-bottom: 1px solid #282828 !important; } " +
+        "    ';" +
+        "    document.head.appendChild(style);" +
+        "  } catch(e) {}" +
+        "})();";
+
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private SecurityManager mSecurityManager;
     private boolean mIsAuthenticated = false;
@@ -372,6 +391,35 @@ public class MainActivity extends Activity {
     private TextView mTxtLockoutVersionInfo;
     private Button mBtnLockoutUpdate;
     private Button mBtnLockoutExit;
+
+    // YouTube App Shell Elements
+    private View mYtAppHeader;
+    private View mLayoutSearchBox;
+    private EditText mEditSearchInput;
+    private View mBtnSearchSubmit;
+    private TextView mBtnHeaderCast;
+    private TextView mBtnHeaderSearch;
+    private TextView mBtnHeaderProfile;
+
+    private View mYtChipsScroll;
+    private TextView mChipAll, mChipTrending, mChipMovies, mChipSeries, mChipAnime, mChipAction, mChipRecently;
+
+    private RelativeLayout mMiniPlayerContainer;
+    private FrameLayout mMiniVideoSurface;
+    private TextView mTxtMiniTitle;
+    private TextView mBtnMiniPlayPause;
+    private TextView mBtnMiniClose;
+    private ProgressBar mPbMiniProgress;
+    private boolean mIsMiniPlayerActive = false;
+
+    private View mYtBottomNav;
+    private View mTabHome, mTabTrending, mTabLibrary, mTabYou;
+    private TextView mTxtTabHome, mTxtTabTrending, mTxtTabLibrary, mTxtTabYou;
+
+    private View mYtCenterControls;
+
+    // Active Settings Dialog
+    private AlertDialog mActiveSettingsDialog = null;
 
     private int mOriginalOrientation;
     private String mUserAgentString;
@@ -526,6 +574,7 @@ public class MainActivity extends Activity {
         mBtnLockoutExit = findViewById(R.id.btn_lockout_exit);
 
         setupGestureController();
+        setupYouTubeAppShell();
         setupWebView();
         setupSettingsAndKeypad();
         showBootloopSignaturePopup();
@@ -736,11 +785,14 @@ public class MainActivity extends Activity {
         builder.setView(dialogView);
 
         final AlertDialog dialog = builder.create();
+        mActiveSettingsDialog = dialog;
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
 
-        TextView btnClose = dialogView.findViewById(R.id.btn_close_settings);
+        View btnClose = dialogView.findViewById(R.id.btn_close_settings);
         Button btnDone = dialogView.findViewById(R.id.btn_done_settings);
         final Switch switchPin = dialogView.findViewById(R.id.switch_pin_lock);
         final Button btnChangePin = dialogView.findViewById(R.id.btn_change_pin);
@@ -928,13 +980,31 @@ public class MainActivity extends Activity {
         View.OnClickListener dismissListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dialog.dismiss();
+                if (dialog != null && dialog.isShowing()) {
+                    dialog.dismiss();
+                }
                 applyEdgeToEdgeImmersive();
             }
         };
 
         if (btnClose != null) btnClose.setOnClickListener(dismissListener);
         if (btnDone != null) btnDone.setOnClickListener(dismissListener);
+
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface d) {
+                mActiveSettingsDialog = null;
+                applyEdgeToEdgeImmersive();
+            }
+        });
+
+        dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface d) {
+                mActiveSettingsDialog = null;
+                applyEdgeToEdgeImmersive();
+            }
+        });
 
         dialog.show();
 
@@ -963,6 +1033,8 @@ public class MainActivity extends Activity {
         builder.setView(dialogView);
 
         final AlertDialog dialog = builder.create();
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
@@ -1099,6 +1171,11 @@ public class MainActivity extends Activity {
                     public void onAspectRatioChange(int mode) {
                         applyAspectRatio(mode);
                     }
+
+                    @Override
+                    public void onMinimize() {
+                        minimizeToMiniPlayer();
+                    }
                 }
         );
 
@@ -1111,7 +1188,7 @@ public class MainActivity extends Activity {
         mBtnPlayerClose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                exitFullscreenVideo();
+                minimizeToMiniPlayer();
             }
         });
 
@@ -1141,6 +1218,498 @@ public class MainActivity extends Activity {
                 mBtnLock.setText(locked ? "🔒 Locked" : "🔓 Lock");
             }
         });
+    }
+
+    private void setupYouTubeAppShell() {
+        mYtAppHeader = findViewById(R.id.yt_app_header);
+        mLayoutSearchBox = findViewById(R.id.layout_search_box);
+        mEditSearchInput = findViewById(R.id.edit_search_input);
+        mBtnSearchSubmit = findViewById(R.id.btn_search_submit);
+        mBtnHeaderCast = findViewById(R.id.btn_header_cast);
+        mBtnHeaderSearch = findViewById(R.id.btn_header_search);
+        mBtnHeaderProfile = findViewById(R.id.btn_header_profile);
+
+        mYtChipsScroll = findViewById(R.id.yt_chips_scroll);
+        mChipAll = findViewById(R.id.chip_all);
+        mChipTrending = findViewById(R.id.chip_trending);
+        mChipMovies = findViewById(R.id.chip_movies);
+        mChipSeries = findViewById(R.id.chip_series);
+        mChipAnime = findViewById(R.id.chip_anime);
+        mChipAction = findViewById(R.id.chip_action);
+        mChipRecently = findViewById(R.id.chip_recently);
+
+        mMiniPlayerContainer = findViewById(R.id.mini_player_container);
+        mMiniVideoSurface = findViewById(R.id.mini_video_surface);
+        mTxtMiniTitle = findViewById(R.id.txt_mini_title);
+        mBtnMiniPlayPause = findViewById(R.id.btn_mini_play_pause);
+        mBtnMiniClose = findViewById(R.id.btn_mini_close);
+        mPbMiniProgress = findViewById(R.id.pb_mini_progress);
+
+        mYtBottomNav = findViewById(R.id.yt_bottom_nav);
+        mTabHome = findViewById(R.id.tab_home);
+        mTabTrending = findViewById(R.id.tab_trending);
+        mTabLibrary = findViewById(R.id.tab_library);
+        mTabYou = findViewById(R.id.tab_you);
+        mTxtTabHome = findViewById(R.id.txt_tab_home);
+        mTxtTabTrending = findViewById(R.id.txt_tab_trending);
+        mTxtTabLibrary = findViewById(R.id.txt_tab_library);
+        mTxtTabYou = findViewById(R.id.txt_tab_you);
+
+        mYtCenterControls = findViewById(R.id.yt_center_controls);
+        if (mGestureController != null) {
+            mGestureController.setCenterControls(mYtCenterControls);
+        }
+
+        if (mBtnHeaderCast != null) {
+            mBtnHeaderCast.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mLastStreamUrl != null) {
+                        launchExternalPlayer(mLastStreamUrl, mLastStreamFormat);
+                    } else {
+                        Toast.makeText(MainActivity.this, "Play a video first to cast to VLC/MPV", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        if (mBtnHeaderSearch != null) {
+            mBtnHeaderSearch.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mLayoutSearchBox != null) {
+                        if (mLayoutSearchBox.getVisibility() == View.VISIBLE) {
+                            mLayoutSearchBox.setVisibility(View.GONE);
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            if (imm != null && mEditSearchInput != null) {
+                                imm.hideSoftInputFromWindow(mEditSearchInput.getWindowToken(), 0);
+                            }
+                        } else {
+                            mLayoutSearchBox.setVisibility(View.VISIBLE);
+                            if (mEditSearchInput != null) {
+                                mEditSearchInput.requestFocus();
+                                InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                                if (imm != null) {
+                                    imm.showSoftInput(mEditSearchInput, InputMethodManager.SHOW_IMPLICIT);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        View.OnClickListener performSearchListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mEditSearchInput != null) {
+                    String query = mEditSearchInput.getText().toString().trim();
+                    if (!query.isEmpty()) {
+                        performWebSearch(query);
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (imm != null) {
+                            imm.hideSoftInputFromWindow(mEditSearchInput.getWindowToken(), 0);
+                        }
+                    }
+                }
+            }
+        };
+
+        if (mBtnSearchSubmit != null) {
+            mBtnSearchSubmit.setOnClickListener(performSearchListener);
+        }
+
+        if (mEditSearchInput != null) {
+            mEditSearchInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+                @Override
+                public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                    String query = v.getText().toString().trim();
+                    if (!query.isEmpty()) {
+                        performWebSearch(query);
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        if (imm != null) {
+                            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            });
+        }
+
+        if (mBtnHeaderProfile != null) {
+            mBtnHeaderProfile.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showSettingsDialog();
+                }
+            });
+        }
+
+        setupCategoryChips();
+
+        if (mMiniPlayerContainer != null) {
+            mMiniPlayerContainer.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    expandFromMiniPlayer();
+                }
+            });
+        }
+
+        if (mBtnMiniPlayPause != null) {
+            mBtnMiniPlayPause.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mGestureController != null) {
+                        mGestureController.togglePlayPause();
+                    }
+                }
+            });
+        }
+
+        if (mBtnMiniClose != null) {
+            mBtnMiniClose.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dismissMiniPlayer();
+                }
+            });
+        }
+
+        setupBottomNavTabs();
+    }
+
+    private void selectChip(TextView selected) {
+        TextView[] chips = {mChipAll, mChipTrending, mChipMovies, mChipSeries, mChipAnime, mChipAction, mChipRecently};
+        for (TextView chip : chips) {
+            if (chip != null) {
+                if (chip == selected) {
+                    chip.setBackgroundResource(R.drawable.yt_chip_active);
+                    chip.setTextColor(getResources().getColor(R.color.yt_chip_selected_text));
+                } else {
+                    chip.setBackgroundResource(R.drawable.yt_chip_inactive);
+                    chip.setTextColor(getResources().getColor(R.color.yt_text_primary));
+                }
+            }
+        }
+    }
+
+    private void setupCategoryChips() {
+        if (mChipAll != null) {
+            mChipAll.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectChip(mChipAll);
+                    if (mWebView != null) mWebView.loadUrl(TARGET_URL);
+                }
+            });
+        }
+        if (mChipTrending != null) {
+            mChipTrending.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectChip(mChipTrending);
+                    performWebSearch("Trending");
+                }
+            });
+        }
+        if (mChipMovies != null) {
+            mChipMovies.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectChip(mChipMovies);
+                    performWebSearch("Movies");
+                }
+            });
+        }
+        if (mChipSeries != null) {
+            mChipSeries.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectChip(mChipSeries);
+                    performWebSearch("Series");
+                }
+            });
+        }
+        if (mChipAnime != null) {
+            mChipAnime.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectChip(mChipAnime);
+                    performWebSearch("Anime");
+                }
+            });
+        }
+        if (mChipAction != null) {
+            mChipAction.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectChip(mChipAction);
+                    performWebSearch("Action");
+                }
+            });
+        }
+        if (mChipRecently != null) {
+            mChipRecently.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    selectChip(mChipRecently);
+                    performWebSearch("Latest");
+                }
+            });
+        }
+    }
+
+    private void setBottomNavActive(int index) {
+        TextView[] tabTexts = {mTxtTabHome, mTxtTabTrending, mTxtTabLibrary, mTxtTabYou};
+        int activeColor = getResources().getColor(R.color.white);
+        int inactiveColor = getResources().getColor(R.color.yt_text_secondary);
+
+        for (int i = 0; i < tabTexts.length; i++) {
+            if (tabTexts[i] != null) {
+                tabTexts[i].setTextColor(i == index ? activeColor : inactiveColor);
+            }
+        }
+    }
+
+    private void setupBottomNavTabs() {
+        if (mTabHome != null) {
+            mTabHome.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    setBottomNavActive(0);
+                    selectChip(mChipAll);
+                    if (mWebView != null) mWebView.loadUrl(TARGET_URL);
+                }
+            });
+        }
+        if (mTabTrending != null) {
+            mTabTrending.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    setBottomNavActive(1);
+                    selectChip(mChipTrending);
+                    performWebSearch("Trending");
+                }
+            });
+        }
+        if (mTabLibrary != null) {
+            mTabLibrary.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    setBottomNavActive(2);
+                    showLibraryDialog();
+                }
+            });
+        }
+        if (mTabYou != null) {
+            mTabYou.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    setBottomNavActive(3);
+                    showSettingsDialog();
+                }
+            });
+        }
+    }
+
+    private void performWebSearch(String query) {
+        if (mWebView == null || query == null || query.isEmpty()) return;
+        String searchScript =
+            "(function() {" +
+            "  var q = '" + query.replace("'", "\\'") + "';" +
+            "  var inp = document.querySelector('input[type=\"search\"], input[name=\"q\"], input[name=\"search\"], input[name=\"keyword\"], input[placeholder*=\"search\" i], input[placeholder*=\"Search\" i]');" +
+            "  if (inp) {" +
+            "    inp.value = q;" +
+            "    var form = inp.form;" +
+            "    if (form) { form.submit(); return; }" +
+            "    var evt = new Event('input', { bubbles: true });" +
+            "    inp.dispatchEvent(evt);" +
+            "  }" +
+            "  window.location.href = '" + TARGET_URL + "/search?q=' + encodeURIComponent(q);" +
+            "})();";
+        executeJs(searchScript);
+    }
+
+    private void minimizeToMiniPlayer() {
+        if (mCustomView == null) {
+            exitFullscreenVideo();
+            return;
+        }
+
+        mIsMiniPlayerActive = true;
+        mVideoSurfaceHolder.removeAllViews();
+        if (mMiniVideoSurface != null) {
+            mMiniVideoSurface.removeAllViews();
+            mMiniVideoSurface.addView(mCustomView, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+            ));
+        }
+
+        mFullscreenContainer.setVisibility(View.GONE);
+        if (mPlayerBottomBar != null) mPlayerBottomBar.setVisibility(View.GONE);
+        if (mPlayerTopBar != null) mPlayerTopBar.setVisibility(View.GONE);
+
+        if (mMiniPlayerContainer != null) {
+            mMiniPlayerContainer.setVisibility(View.VISIBLE);
+            if (mTxtMiniTitle != null && mTxtPlayerTitle != null) {
+                mTxtMiniTitle.setText(mTxtPlayerTitle.getText());
+            }
+        }
+
+        if (mYtAppHeader != null) mYtAppHeader.setVisibility(View.VISIBLE);
+        if (mYtChipsScroll != null) mYtChipsScroll.setVisibility(View.VISIBLE);
+        if (mYtBottomNav != null) mYtBottomNav.setVisibility(View.VISIBLE);
+        mWebView.setVisibility(View.VISIBLE);
+
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        applyEdgeToEdgeImmersive();
+    }
+
+    private void expandFromMiniPlayer() {
+        if (mCustomView == null) return;
+
+        mIsMiniPlayerActive = false;
+        if (mMiniVideoSurface != null) {
+            mMiniVideoSurface.removeAllViews();
+        }
+        if (mMiniPlayerContainer != null) {
+            mMiniPlayerContainer.setVisibility(View.GONE);
+        }
+
+        mVideoSurfaceHolder.removeAllViews();
+        mVideoSurfaceHolder.addView(mCustomView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+
+        mFullscreenContainer.setVisibility(View.VISIBLE);
+        if (mPlayerBottomBar != null) mPlayerBottomBar.setVisibility(View.VISIBLE);
+        if (mPlayerTopBar != null) mPlayerTopBar.setVisibility(View.VISIBLE);
+
+        if (mYtAppHeader != null) mYtAppHeader.setVisibility(View.GONE);
+        if (mYtChipsScroll != null) mYtChipsScroll.setVisibility(View.GONE);
+        if (mYtBottomNav != null) mYtBottomNav.setVisibility(View.GONE);
+
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        applyEdgeToEdgeImmersive();
+
+        if (mGestureController != null) {
+            mGestureController.reset();
+            mGestureController.scheduleAutoHideControls();
+        }
+    }
+
+    private void dismissMiniPlayer() {
+        mIsMiniPlayerActive = false;
+        if (mMiniVideoSurface != null) {
+            mMiniVideoSurface.removeAllViews();
+        }
+        if (mMiniPlayerContainer != null) {
+            mMiniPlayerContainer.setVisibility(View.GONE);
+        }
+        exitFullscreenVideo();
+    }
+
+    private void showLibraryDialog() {
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_library, null);
+        builder.setView(dialogView);
+
+        final AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+            dialog.getWindow().setGravity(Gravity.BOTTOM);
+            dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+
+        View btnClose = dialogView.findViewById(R.id.btn_close_library);
+        TextView txtLastTitle = dialogView.findViewById(R.id.txt_lib_last_title);
+        TextView txtLastUrl = dialogView.findViewById(R.id.txt_lib_last_url);
+        Button btnResume = dialogView.findViewById(R.id.btn_lib_resume);
+        Button btnExternal = dialogView.findViewById(R.id.btn_lib_external);
+        View btnClear = dialogView.findViewById(R.id.btn_lib_clear);
+        View btnReload = dialogView.findViewById(R.id.btn_lib_reload);
+
+        if (mLastStreamUrl != null) {
+            if (txtLastTitle != null && mTxtPlayerTitle != null) {
+                txtLastTitle.setText(mTxtPlayerTitle.getText());
+            }
+            if (txtLastUrl != null) {
+                txtLastUrl.setText(mLastStreamUrl);
+            }
+        }
+
+        if (btnClose != null) {
+            btnClose.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dialog.dismiss();
+                }
+            });
+        }
+
+        if (btnResume != null) {
+            btnResume.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dialog.dismiss();
+                    if (mIsMiniPlayerActive) {
+                        expandFromMiniPlayer();
+                    } else if (mLastStreamUrl != null) {
+                        mWebView.loadUrl(mLastStreamUrl);
+                    }
+                }
+            });
+        }
+
+        if (btnExternal != null) {
+            btnExternal.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    dialog.dismiss();
+                    launchExternalPlayer(mLastStreamUrl, mLastStreamFormat);
+                }
+            });
+        }
+
+        if (btnClear != null) {
+            btnClear.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mWebView != null) mWebView.clearCache(true);
+                    Toast.makeText(MainActivity.this, "Cache cleared successfully", Toast.LENGTH_SHORT).show();
+                    dialog.dismiss();
+                }
+            });
+        }
+
+        if (btnReload != null) {
+            btnReload.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mWebView != null) mWebView.reload();
+                    dialog.dismiss();
+                }
+            });
+        }
+
+        dialog.show();
+    }
+
+    private void injectYouTubeThemeCss(WebView view) {
+        if (view == null) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            view.evaluateJavascript(YOUTUBE_THEME_CSS, null);
+        } else {
+            view.loadUrl("javascript:" + YOUTUBE_THEME_CSS);
+        }
     }
 
     private void applyAspectRatio(int mode) {
@@ -1616,12 +2185,18 @@ public class MainActivity extends Activity {
                 mProgressBar.setVisibility(View.GONE);
                 injectAdBlockScript(view);
                 injectVideoSyncScript(view);
+                injectYouTubeThemeCss(view);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     CookieManager.getInstance().flush();
                 }
                 String title = view.getTitle();
-                if (title != null && !title.isEmpty() && mTxtPlayerTitle != null) {
-                    mTxtPlayerTitle.setText(title);
+                if (title != null && !title.isEmpty()) {
+                    if (mTxtPlayerTitle != null) {
+                        mTxtPlayerTitle.setText(title);
+                    }
+                    if (mTxtMiniTitle != null) {
+                        mTxtMiniTitle.setText(title);
+                    }
                 }
             }
 
@@ -1778,6 +2353,10 @@ public class MainActivity extends Activity {
                 // Keep WebView VISIBLE behind mFullscreenContainer so Chromium never throttles rendering or pauses DOM timers!
                 mWebView.setVisibility(View.VISIBLE);
                 mFabSettings.setVisibility(View.GONE); // Hide FAB in fullscreen video
+                if (mYtAppHeader != null) mYtAppHeader.setVisibility(View.GONE);
+                if (mYtChipsScroll != null) mYtChipsScroll.setVisibility(View.GONE);
+                if (mYtBottomNav != null) mYtBottomNav.setVisibility(View.GONE);
+                if (mMiniPlayerContainer != null) mMiniPlayerContainer.setVisibility(View.GONE);
                 mFullscreenContainer.setVisibility(View.VISIBLE);
 
                 mVideoSurfaceHolder.removeAllViews();
@@ -1814,16 +2393,25 @@ public class MainActivity extends Activity {
     }
 
     private void exitFullscreenVideo() {
-        if (mCustomView == null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) return;
+        if (mCustomView == null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE) && !mIsMiniPlayerActive) return;
 
         mIsUserSeeking = false;
+        mIsMiniPlayerActive = false;
+
+        if (mMiniVideoSurface != null) {
+            mMiniVideoSurface.removeAllViews();
+        }
+        if (mMiniPlayerContainer != null) {
+            mMiniPlayerContainer.setVisibility(View.GONE);
+        }
 
         mVideoSurfaceHolder.removeAllViews();
         mFullscreenContainer.setVisibility(View.GONE);
         mWebView.setVisibility(View.VISIBLE);
-        if (mFabSettings != null) {
-            mFabSettings.setVisibility(View.VISIBLE);
-        }
+
+        if (mYtAppHeader != null) mYtAppHeader.setVisibility(View.VISIBLE);
+        if (mYtChipsScroll != null) mYtChipsScroll.setVisibility(View.VISIBLE);
+        if (mYtBottomNav != null) mYtBottomNav.setVisibility(View.VISIBLE);
 
         if (mPlayerBottomBar != null) {
             mPlayerBottomBar.setVisibility(View.GONE);
@@ -1838,7 +2426,7 @@ public class MainActivity extends Activity {
         }
 
         applyEdgeToEdgeImmersive();
-        setRequestedOrientation(mOriginalOrientation);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         if (mCustomViewCallback != null) {
             mCustomViewCallback.onCustomViewHidden();
@@ -1896,14 +2484,26 @@ public class MainActivity extends Activity {
             return;
         }
 
+        // If settings menu dialog is open, cleanly dismiss it
+        if (mActiveSettingsDialog != null && mActiveSettingsDialog.isShowing()) {
+            mActiveSettingsDialog.dismiss();
+            mActiveSettingsDialog = null;
+            return;
+        }
+
         // If locked, back button should not bypass lock
-        if (mLockOverlay.getVisibility() == View.VISIBLE) {
+        if (mLockOverlay != null && mLockOverlay.getVisibility() == View.VISIBLE) {
             finish();
             return;
         }
 
         if (mFullscreenContainer != null && mFullscreenContainer.getVisibility() == View.VISIBLE) {
-            exitFullscreenVideo();
+            minimizeToMiniPlayer();
+            return;
+        }
+
+        if (mIsMiniPlayerActive) {
+            dismissMiniPlayer();
             return;
         }
 
@@ -2172,6 +2772,13 @@ public class MainActivity extends Activity {
                 if (mBtnPlayPause != null) {
                     mBtnPlayPause.setText(isPlaying ? "⏸" : "▶");
                 }
+                if (mBtnMiniPlayPause != null) {
+                    mBtnMiniPlayPause.setText(isPlaying ? "⏸" : "▶");
+                }
+                if (mPbMiniProgress != null && mVideoDuration > 0) {
+                    int progress = (int) ((currentSec / mVideoDuration) * 1000);
+                    mPbMiniProgress.setProgress(progress);
+                }
                 if (mGestureController != null) {
                     mGestureController.updatePlaybackTime((long) currentSec, (long) mVideoDuration);
                     mGestureController.updatePlaybackState(isPlaying);
@@ -2412,6 +3019,9 @@ public class MainActivity extends Activity {
                     public void run() {
                         if (mTxtPlayerTitle != null) {
                             mTxtPlayerTitle.setText(title);
+                        }
+                        if (mTxtMiniTitle != null) {
+                            mTxtMiniTitle.setText(title);
                         }
                     }
                 });

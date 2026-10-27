@@ -22,4 +22,20 @@
     <color name="m3_primary">#FFE50914</color>
     <color name="m3_secondary_text">#FFA0A6B2</color>
     <color name="m3_outline">#33FFFFFF</color>
+
+    <!-- YouTube Design System Palette -->
+    <color name="yt_red">#FFFF0000</color>
+    <color name="yt_dark_bg">#FF0F0F0F</color>
+    <color name="yt_surface">#FF212121</color>
+    <color name="yt_surface_card">#FF272727</color>
+    <color name="yt_chip_bg">#FF272727</color>
+    <color name="yt_chip_selected_bg">#FFFFFFFF</color>
+    <color name="yt_chip_selected_text">#FF0F0F0F</color>
+    <color name="yt_text_primary">#FFFFFFFF</color>
+    <color name="yt_text_secondary">#FFAAAAAA</color>
+    <color name="yt_bottom_nav_bg">#FA0F0F0F</color>
+    <color name="yt_miniplayer_bg">#FA212121</color>
+    <color name="yt_divider">#FF282828</color>
+    <color name="yt_seek_track">#4DFFFFFF</color>
+    <color name="yt_seek_buffer">#80FFFFFF</color>
 </resources>
