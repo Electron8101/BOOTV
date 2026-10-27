@@ -102,40 +102,101 @@
             android:layout_marginTop="2dp" />
     </LinearLayout>
 
-    <!-- Modern Floating Glassmorphic External Player Pill -->
+    <!-- Soul Browser Style Floating Media Sniffer Dock -->
     <LinearLayout
-        android:id="@+id/pill_external_player"
+        android:id="@+id/dock_video_sniffer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+        android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
+        android:layout_marginBottom="24dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@drawable/btn_external_player"
-        android:clickable="true"
-        android:focusable="true"
-        android:elevation="12dp"
+        android:background="@drawable/glass_panel"
+        android:padding="8dp"
+        android:elevation="14dp"
         android:visibility="gone">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📺 Play in External Player"
-            android:textColor="@color/neon_cyan"
-            android:textSize="13sp"
-            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/txt_stream_format_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="HLS"
+            android:text="🎬 HLS"
             android:textColor="@color/white"
-            android:textSize="9sp"
+            android:textSize="10sp"
             android:textStyle="bold"
             android:background="@drawable/badge_beta"
-            android:layout_marginLeft="8dp" />
+            android:paddingLeft="7dp"
+            android:paddingRight="7dp"
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:layout_marginRight="8dp" />
+
+        <TextView
+            android:id="@+id/btn_dock_play_fullscreen"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="▶ Fullscreen"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/btn_pill"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:layout_marginRight="6dp" />
+
+        <TextView
+            android:id="@+id/btn_dock_pip"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="❐ PiP"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/glass_button"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:layout_marginRight="6dp" />
+
+        <TextView
+            android:id="@+id/btn_dock_external"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="📺 External"
+            android:textColor="@color/neon_cyan"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/btn_external_player"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:layout_marginRight="6dp" />
+
+        <TextView
+            android:id="@+id/btn_dock_copy"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="📋 Copy"
+            android:textColor="@color/white"
+            android:textSize="11sp"
+            android:gravity="center"
+            android:background="@drawable/glass_button"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:layout_marginRight="6dp" />
+
+        <TextView
+            android:id="@+id/btn_dock_close"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:text="✕"
+            android:textColor="@color/gray"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:background="@drawable/glass_button" />
     </LinearLayout>
 
     <!-- Fullscreen Video Container with Notch & Gesture Support -->
@@ -159,7 +220,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Top Controls Overlay Bar -->
+        <!-- Soul Browser Style Top Header Bar -->
         <LinearLayout
             android:id="@+id/player_top_bar"
             android:layout_width="match_parent"
@@ -167,135 +228,111 @@
             android:layout_gravity="top"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:padding="14dp"
-            android:background="@drawable/hud_background"
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:background="@drawable/glass_panel"
             android:layout_margin="12dp">
 
             <TextView
                 android:id="@+id/btn_player_close"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="34dp"
                 android:text="✕ Close"
                 android:textColor="@color/white"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:gravity="center"
                 android:background="@drawable/btn_pill"
-                android:paddingLeft="14dp"
-                android:paddingRight="14dp" />
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp" />
 
-            <View
+            <!-- Title / Channel info -->
+            <TextView
+                android:id="@+id/txt_player_title"
                 android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <TextView
-                android:id="@+id/btn_rewind_10"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="⏪ -10s"
-                android:textColor="@color/white"
-                android:textSize="13sp"
-                android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:layout_marginRight="6dp" />
-
-            <!-- Dedicated Pause / Play Button in Fullscreen -->
-            <TextView
-                android:id="@+id/btn_play_pause"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="⏸ Pause"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginLeft="12dp"
+                android:layout_marginRight="8dp"
+                android:text="BOOTV Player"
                 android:textColor="@color/white"
                 android:textSize="13sp"
                 android:textStyle="bold"
-                android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:layout_marginRight="6dp" />
+                android:singleLine="true"
+                android:ellipsize="marquee" />
 
-            <TextView
-                android:id="@+id/btn_forward_10"
+            <!-- Signature Soul Browser Clock & Battery status -->
+            <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="⏩ +10s"
-                android:textColor="@color/white"
-                android:textSize="13sp"
-                android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:layout_marginRight="6dp" />
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/glass_button"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:layout_marginRight="8dp">
+
+                <TextView
+                    android:id="@+id/txt_player_clock"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="12:00"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/txt_player_battery"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" 🔋 100%"
+                    android:textColor="@color/neon_cyan"
+                    android:textSize="11sp"
+                    android:layout_marginLeft="6dp" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/btn_aspect_ratio"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="34dp"
                 android:text="⤢ Fit"
                 android:textColor="@color/white"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:gravity="center"
                 android:background="@drawable/btn_pill"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:layout_marginRight="6dp" />
-
-            <TextView
-                android:id="@+id/btn_speed"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="⚡ 1.0x"
-                android:textColor="@color/white"
-                android:textSize="13sp"
-                android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:layout_marginRight="6dp" />
-
-            <TextView
-                android:id="@+id/btn_lock"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="🔓 Lock"
-                android:textColor="@color/white"
-                android:textSize="13sp"
-                android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
                 android:layout_marginRight="6dp" />
 
             <TextView
                 android:id="@+id/btn_pip"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="34dp"
                 android:text="❐ PiP"
                 android:textColor="@color/white"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:gravity="center"
                 android:background="@drawable/glass_button"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"
                 android:layout_marginRight="6dp" />
 
             <TextView
-                android:id="@+id/btn_fullscreen_ext_player"
+                android:id="@+id/btn_lock"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="📺 Player"
-                android:textColor="@color/neon_cyan"
-                android:textSize="13sp"
-                android:textStyle="bold"
+                android:layout_height="34dp"
+                android:text="🔓 Lock"
+                android:textColor="@color/white"
+                android:textSize="12sp"
                 android:gravity="center"
-                android:background="@drawable/btn_external_player"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp"
-                android:visibility="gone" />
+                android:background="@drawable/btn_pill"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp" />
         </LinearLayout>
 
         <!-- Brightness Gesture HUD (Left) -->
@@ -307,7 +344,7 @@
             android:layout_marginLeft="36dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="@drawable/hud_background"
+            android:background="@drawable/glass_panel"
             android:padding="16dp"
             android:visibility="gone">
 
@@ -340,7 +377,7 @@
             android:layout_marginRight="36dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="@drawable/hud_background"
+            android:background="@drawable/glass_panel"
             android:padding="16dp"
             android:visibility="gone">
 
@@ -372,7 +409,7 @@
             android:layout_gravity="center"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="@drawable/hud_background"
+            android:background="@drawable/glass_panel"
             android:padding="20dp"
             android:visibility="gone">
 
@@ -402,17 +439,147 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="32dp"
+            android:layout_marginBottom="90dp"
             android:text="Action"
             android:textColor="@color/white"
             android:textSize="14sp"
-            android:background="@drawable/hud_background"
+            android:background="@drawable/glass_panel"
             android:paddingLeft="18dp"
             android:paddingRight="18dp"
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
             android:visibility="gone" />
 
+        <!-- Soul / Via Browser Style Bottom Timeline & Controls Bar -->
+        <LinearLayout
+            android:id="@+id/player_bottom_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:orientation="vertical"
+            android:paddingLeft="14dp"
+            android:paddingRight="14dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:background="@drawable/glass_panel"
+            android:layout_margin="12dp">
+
+            <!-- Scrubber / Timeline Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+
+                <TextView
+                    android:id="@+id/txt_time_current"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <SeekBar
+                    android:id="@+id/player_seekbar"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:max="1000"
+                    android:progress="0"
+                    android:progressDrawable="@drawable/seekbar_progress"
+                    android:thumb="@drawable/seekbar_thumb"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
+
+                <TextView
+                    android:id="@+id/txt_time_total"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00"
+                    android:textColor="@color/gray"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Playback Controls Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/btn_rewind_10"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:text="⏪ -10s"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/btn_pill"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:layout_marginRight="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_play_pause"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:text="⏸ Pause"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/btn_pill"
+                    android:paddingLeft="14dp"
+                    android:paddingRight="14dp"
+                    android:layout_marginRight="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_forward_10"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:text="⏩ +10s"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/btn_pill"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/btn_speed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:text="⚡ 1.0x"
+                    android:textColor="@color/white"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:background="@drawable/glass_button"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:layout_marginRight="6dp" />
+
+                <TextView
+                    android:id="@+id/btn_fullscreen_ext_player"
+                    android:layout_width="wrap_content"
+                    android:layout_height="34dp"
+                    android:text="📺 VLC / Player"
+                    android:textColor="@color/neon_cyan"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:gravity="center"
+                    android:background="@drawable/btn_external_player"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp" />
+            </LinearLayout>
+        </LinearLayout>
     </FrameLayout>
 
     <!-- Custom In-App Keypad & Author Lock Overlay -->

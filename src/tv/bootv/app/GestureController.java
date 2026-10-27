@@ -29,6 +29,7 @@ public class GestureController {
 
     private final View mTouchView;
     private final View mTopBar;
+    private View mBottomBar;
     private final View mHudBrightness;
     private final TextView mTxtBrightness;
     private final ProgressBar mPbBrightness;
@@ -213,19 +214,10 @@ public class GestureController {
 
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
-                if (mTopBar.getVisibility() == View.VISIBLE) {
-                    mTopBar.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
-                        @Override
-                        public void run() {
-                            mTopBar.setVisibility(View.GONE);
-                            mTopBar.setAlpha(1f);
-                        }
-                    }).start();
+                if (mTopBar != null && mTopBar.getVisibility() == View.VISIBLE) {
+                    hideControls();
                 } else {
-                    mTopBar.setAlpha(0f);
-                    mTopBar.setVisibility(View.VISIBLE);
-                    mTopBar.animate().alpha(1f).setDuration(220).start();
-                    scheduleAutoHideTopBar();
+                    showControls();
                 }
                 return true;
             }
@@ -370,22 +362,57 @@ public class GestureController {
         }
     }
 
+    public void setBottomBar(View bottomBar) {
+        mBottomBar = bottomBar;
+    }
+
     public void scheduleAutoHideTopBar() {
+        scheduleAutoHideControls();
+    }
+
+    public void scheduleAutoHideControls() {
         mHandler.removeCallbacksAndMessages(mTopBar);
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (mTopBar != null && mTopBar.getVisibility() == View.VISIBLE) {
-                    mTopBar.animate().alpha(0f).setDuration(300).withEndAction(new Runnable() {
-                        @Override
-                        public void run() {
-                            mTopBar.setVisibility(View.GONE);
-                            mTopBar.setAlpha(1f);
-                        }
-                    }).start();
-                }
+                hideControls();
             }
-        }, 4000);
+        }, 4500);
+    }
+
+    public void showControls() {
+        if (mTopBar != null) {
+            mTopBar.setAlpha(0f);
+            mTopBar.setVisibility(View.VISIBLE);
+            mTopBar.animate().alpha(1f).setDuration(220).start();
+        }
+        if (mBottomBar != null) {
+            mBottomBar.setAlpha(0f);
+            mBottomBar.setVisibility(View.VISIBLE);
+            mBottomBar.animate().alpha(1f).setDuration(220).start();
+        }
+        scheduleAutoHideControls();
+    }
+
+    public void hideControls() {
+        if (mTopBar != null && mTopBar.getVisibility() == View.VISIBLE) {
+            mTopBar.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
+                @Override
+                public void run() {
+                    mTopBar.setVisibility(View.GONE);
+                    mTopBar.setAlpha(1f);
+                }
+            }).start();
+        }
+        if (mBottomBar != null && mBottomBar.getVisibility() == View.VISIBLE) {
+            mBottomBar.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
+                @Override
+                public void run() {
+                    mBottomBar.setVisibility(View.GONE);
+                    mBottomBar.setAlpha(1f);
+                }
+            }).start();
+        }
     }
 
     public void showFeedback(String message) {
@@ -434,8 +461,9 @@ public class GestureController {
         if (mCurrentSpeed == 1.0f) mCurrentSpeed = 1.25f;
         else if (mCurrentSpeed == 1.25f) mCurrentSpeed = 1.5f;
         else if (mCurrentSpeed == 1.5f) mCurrentSpeed = 2.0f;
-        else if (mCurrentSpeed == 2.0f) mCurrentSpeed = 0.75f;
-        else if (mCurrentSpeed == 0.75f) mCurrentSpeed = 0.5f;
+        else if (mCurrentSpeed == 2.0f) mCurrentSpeed = 3.0f;
+        else if (mCurrentSpeed == 3.0f) mCurrentSpeed = 0.5f;
+        else if (mCurrentSpeed == 0.5f) mCurrentSpeed = 0.75f;
         else mCurrentSpeed = 1.0f;
 
         showFeedback("⚡ Speed: " + mCurrentSpeed + "x");
@@ -475,6 +503,7 @@ public class GestureController {
         mHudSeek.setVisibility(View.GONE);
         mHudFeedback.setVisibility(View.GONE);
         mTopBar.setVisibility(View.VISIBLE);
-        scheduleAutoHideTopBar();
+        if (mBottomBar != null) mBottomBar.setVisibility(View.VISIBLE);
+        scheduleAutoHideControls();
     }
 }

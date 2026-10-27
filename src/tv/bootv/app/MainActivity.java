@@ -3,19 +3,30 @@ package tv.bootv.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PictureInPictureParams;
+import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Rational;
+import android.webkit.JavascriptInterface;
+import android.widget.SeekBar;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -136,6 +147,18 @@ public class MainActivity extends Activity {
         "      }" +
         "    } catch(e) {}" +
         "  }" +
+        "  function seekTo(target) {" +
+        "    try {" +
+        "      if (window.jwplayer) {" +
+        "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
+        "        if (p && typeof p.seek === 'function') { p.seek(target); }" +
+        "      }" +
+        "    } catch(e) {}" +
+        "    try {" +
+        "      var vs = document.querySelectorAll('video');" +
+        "      for (var i = 0; i < vs.length; i++) { vs[i].currentTime = target; }" +
+        "    } catch(e) {}" +
+        "  }" +
         "  function setSpeed(speed) {" +
         "    try {" +
         "      if (window.jwplayer) {" +
@@ -148,10 +171,43 @@ public class MainActivity extends Activity {
         "      for (var i = 0; i < vs.length; i++) vs[i].playbackRate = speed;" +
         "    } catch(e) {}" +
         "  }" +
+        "  setInterval(function() {" +
+        "    try {" +
+        "      var cur = 0, dur = 0, playing = false;" +
+        "      if (window.jwplayer) {" +
+        "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
+        "        if (p && typeof p.getPosition === 'function') {" +
+        "          cur = p.getPosition() || 0;" +
+        "          dur = (typeof p.getDuration === 'function' ? p.getDuration() : 0) || 0;" +
+        "          playing = (typeof p.getState === 'function') ? (p.getState() === 'playing') : false;" +
+        "        }" +
+        "      }" +
+        "      if (!dur) {" +
+        "        var vs = document.querySelectorAll('video');" +
+        "        for (var i = 0; i < vs.length; i++) {" +
+        "          if (vs[i].duration && vs[i].duration > 0) {" +
+        "            cur = vs[i].currentTime || 0;" +
+        "            dur = vs[i].duration || 0;" +
+        "            playing = !vs[i].paused;" +
+        "            break;" +
+        "          }" +
+        "        }" +
+        "      }" +
+        "      if (dur > 0) {" +
+        "        if (window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
+        "          window.AndroidBridge.onVideoTimeUpdate(cur, dur, playing);" +
+        "        } else {" +
+        "          window.parent.postMessage({ type: 'SISKA_VIDEO_TIME_UPDATE', current: cur, duration: dur, playing: playing }, '*');" +
+        "        }" +
+        "      }" +
+        "    } catch(e) {}" +
+        "  }, 500);" +
         "  window.addEventListener('message', function(e) {" +
         "    if (!e.data || typeof e.data !== 'object') return;" +
         "    if (e.data.type === 'SISKA_VIDEO_SEEK') {" +
         "      seek(e.data.delta);" +
+        "    } else if (e.data.type === 'SISKA_VIDEO_SEEK_TO') {" +
+        "      seekTo(e.data.target);" +
         "    } else if (e.data.type === 'SISKA_VIDEO_SET_PLAY') {" +
         "      applyPlayState(e.data.play);" +
         "    } else if (e.data.type === 'SISKA_VIDEO_TOGGLE') {" +
@@ -243,9 +299,41 @@ public class MainActivity extends Activity {
     private TextView mBtnPip;
     private TextView mBtnFullscreenExtPlayer;
     private LinearLayout mPillExternalPlayer;
-    private TextView mTxtStreamFormatBadge;
     private String mLastStreamUrl = null;
     private String mLastStreamFormat = "HLS";
+
+    // Soul Browser / Via Browser Player Controls & Timeline
+    private View mPlayerBottomBar;
+    private TextView mTxtPlayerTitle;
+    private TextView mTxtPlayerClock;
+    private TextView mTxtPlayerBattery;
+    private TextView mTxtTimeCurrent;
+    private TextView mTxtTimeTotal;
+    private SeekBar mPlayerSeekBar;
+    private boolean mIsUserSeeking = false;
+    private double mVideoDuration = 0;
+
+    // Floating Media Sniffer Dock
+    private View mDockVideoSniffer;
+    private TextView mTxtStreamFormatBadge;
+    private TextView mBtnDockPlayFullscreen;
+    private TextView mBtnDockPip;
+    private TextView mBtnDockExternal;
+    private TextView mBtnDockCopy;
+    private View mBtnDockClose;
+
+    // Battery Receiver & Clock Updater
+    private BroadcastReceiver mBatteryReceiver;
+    private final Runnable mClockUpdateRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mTxtPlayerClock != null) {
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                mTxtPlayerClock.setText(sdf.format(new Date()));
+            }
+            mHandler.postDelayed(this, 10000);
+        }
+    };
 
     // UI & Security Elements
     private FrameLayout mFabSettings;
@@ -305,8 +393,24 @@ public class MainActivity extends Activity {
         mBtnLock = findViewById(R.id.btn_lock);
         mBtnPip = findViewById(R.id.btn_pip);
         mBtnFullscreenExtPlayer = findViewById(R.id.btn_fullscreen_ext_player);
-        mPillExternalPlayer = findViewById(R.id.pill_external_player);
+
+        // Soul Browser Top & Bottom Bars
+        mPlayerBottomBar = findViewById(R.id.player_bottom_bar);
+        mTxtPlayerTitle = findViewById(R.id.txt_player_title);
+        mTxtPlayerClock = findViewById(R.id.txt_player_clock);
+        mTxtPlayerBattery = findViewById(R.id.txt_player_battery);
+        mTxtTimeCurrent = findViewById(R.id.txt_time_current);
+        mTxtTimeTotal = findViewById(R.id.txt_time_total);
+        mPlayerSeekBar = findViewById(R.id.player_seekbar);
+
+        // Floating Media Sniffer Dock
+        mDockVideoSniffer = findViewById(R.id.dock_video_sniffer);
         mTxtStreamFormatBadge = findViewById(R.id.txt_stream_format_badge);
+        mBtnDockPlayFullscreen = findViewById(R.id.btn_dock_play_fullscreen);
+        mBtnDockPip = findViewById(R.id.btn_dock_pip);
+        mBtnDockExternal = findViewById(R.id.btn_dock_external);
+        mBtnDockCopy = findViewById(R.id.btn_dock_copy);
+        mBtnDockClose = findViewById(R.id.btn_dock_close);
 
         if (mBtnPip != null) {
             mBtnPip.setOnClickListener(new View.OnClickListener() {
@@ -327,9 +431,100 @@ public class MainActivity extends Activity {
         if (mBtnFullscreenExtPlayer != null) {
             mBtnFullscreenExtPlayer.setOnClickListener(extPlayerClickListener);
         }
-        if (mPillExternalPlayer != null) {
-            mPillExternalPlayer.setOnClickListener(extPlayerClickListener);
+
+        if (mPlayerSeekBar != null) {
+            mPlayerSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (fromUser && mVideoDuration > 0) {
+                        double targetSec = (progress / 1000.0) * mVideoDuration;
+                        if (mTxtTimeCurrent != null) {
+                            mTxtTimeCurrent.setText(formatTime((long) targetSec));
+                        }
+                    }
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    mIsUserSeeking = true;
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    mIsUserSeeking = false;
+                    if (mVideoDuration > 0) {
+                        double targetSec = (seekBar.getProgress() / 1000.0) * mVideoDuration;
+                        seekVideoTo(targetSec);
+                    }
+                }
+            });
         }
+
+        if (mBtnDockPlayFullscreen != null) {
+            mBtnDockPlayFullscreen.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    triggerFullscreenVideo();
+                }
+            });
+        }
+        if (mBtnDockPip != null) {
+            mBtnDockPip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    enterPipMode();
+                }
+            });
+        }
+        if (mBtnDockExternal != null) {
+            mBtnDockExternal.setOnClickListener(extPlayerClickListener);
+        }
+        if (mBtnDockCopy != null) {
+            mBtnDockCopy.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mLastStreamUrl != null) {
+                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (cm != null) {
+                            cm.setPrimaryClip(ClipData.newPlainText("Stream URL", mLastStreamUrl));
+                            Toast.makeText(MainActivity.this, "Stream URL copied to clipboard!", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                }
+            });
+        }
+        if (mBtnDockClose != null) {
+            mBtnDockClose.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (mDockVideoSniffer != null) {
+                        mDockVideoSniffer.animate().alpha(0f).setDuration(200).withEndAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                mDockVideoSniffer.setVisibility(View.GONE);
+                                mDockVideoSniffer.setAlpha(1f);
+                            }
+                        }).start();
+                    }
+                }
+            });
+        }
+
+        mBatteryReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent != null && Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+                    int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                    int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                    if (level >= 0 && scale > 0) {
+                        int pct = (int) ((level / (float) scale) * 100);
+                        if (mTxtPlayerBattery != null) {
+                            mTxtPlayerBattery.setText(" 🔋 " + pct + "%");
+                        }
+                    }
+                }
+            }
+        };
 
         // UI & Security Elements
         mFabSettings = findViewById(R.id.fab_settings);
@@ -917,6 +1112,8 @@ public class MainActivity extends Activity {
                 }
         );
 
+        mGestureController.setBottomBar(mPlayerBottomBar);
+
         mBtnPlayerClose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -1245,6 +1442,8 @@ public class MainActivity extends Activity {
             mWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         }
 
+        mWebView.addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
+
         mWebView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
@@ -1257,6 +1456,11 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 mProgressBar.setVisibility(View.GONE);
                 injectAdBlockScript(view);
+                injectVideoSyncScript(view);
+                String title = view.getTitle();
+                if (title != null && !title.isEmpty() && mTxtPlayerTitle != null) {
+                    mTxtPlayerTitle.setText(title);
+                }
             }
 
             @Override
@@ -1398,6 +1602,15 @@ public class MainActivity extends Activity {
                 if (mPillExternalPlayer != null) {
                     mPillExternalPlayer.setVisibility(View.GONE);
                 }
+                if (mDockVideoSniffer != null) {
+                    mDockVideoSniffer.setVisibility(View.GONE);
+                }
+                if (mPlayerBottomBar != null) {
+                    mPlayerBottomBar.setVisibility(View.VISIBLE);
+                }
+                if (mPlayerTopBar != null) {
+                    mPlayerTopBar.setVisibility(View.VISIBLE);
+                }
                 if (mBtnFullscreenExtPlayer != null && mLastStreamUrl != null) {
                     mBtnFullscreenExtPlayer.setVisibility(View.VISIBLE);
                     mBtnFullscreenExtPlayer.setText("📺 " + mLastStreamFormat);
@@ -1408,6 +1621,7 @@ public class MainActivity extends Activity {
 
                 mGestureController.setCustomView(view);
                 mGestureController.reset();
+                mGestureController.scheduleAutoHideControls();
             }
 
             @Override
@@ -1427,7 +1641,16 @@ public class MainActivity extends Activity {
         mFabSettings.setVisibility(View.VISIBLE); // Restore FAB
         mWebView.setVisibility(View.VISIBLE);
 
-        if (mLastStreamUrl != null && mPillExternalPlayer != null) {
+        if (mPlayerBottomBar != null) {
+            mPlayerBottomBar.setVisibility(View.GONE);
+        }
+        if (mPlayerTopBar != null) {
+            mPlayerTopBar.setVisibility(View.GONE);
+        }
+        if (mLastStreamUrl != null && mDockVideoSniffer != null) {
+            mDockVideoSniffer.setVisibility(View.VISIBLE);
+            mDockVideoSniffer.setAlpha(1.0f);
+        } else if (mLastStreamUrl != null && mPillExternalPlayer != null) {
             mPillExternalPlayer.setVisibility(View.VISIBLE);
         }
 
@@ -1546,7 +1769,10 @@ public class MainActivity extends Activity {
                     if (mTxtStreamFormatBadge != null) {
                         mTxtStreamFormatBadge.setText(finalFormat);
                     }
-                    if (mPillExternalPlayer != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
+                    if (mDockVideoSniffer != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
+                        mDockVideoSniffer.setVisibility(View.VISIBLE);
+                        mDockVideoSniffer.setAlpha(1.0f);
+                    } else if (mPillExternalPlayer != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
                         mPillExternalPlayer.setVisibility(View.VISIBLE);
                     }
                     if (mBtnFullscreenExtPlayer != null) {
@@ -1620,17 +1846,26 @@ public class MainActivity extends Activity {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
         if (isInPictureInPictureMode) {
             if (mPlayerTopBar != null) mPlayerTopBar.setVisibility(View.GONE);
+            if (mPlayerBottomBar != null) mPlayerBottomBar.setVisibility(View.GONE);
+            if (mDockVideoSniffer != null) mDockVideoSniffer.setVisibility(View.GONE);
             if (mFabSettings != null) mFabSettings.setVisibility(View.GONE);
             if (mPillExternalPlayer != null) mPillExternalPlayer.setVisibility(View.GONE);
             if (mPopupBootloop != null) mPopupBootloop.setVisibility(View.GONE);
             if (mLockOverlay != null) mLockOverlay.setVisibility(View.GONE);
             if (mGestureTouchView != null) mGestureTouchView.setVisibility(View.GONE);
         } else {
-            if (mFabSettings != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
-                mFabSettings.setVisibility(View.VISIBLE);
-            }
-            if (mLastStreamUrl != null && mPillExternalPlayer != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
-                mPillExternalPlayer.setVisibility(View.VISIBLE);
+            if (mFullscreenContainer != null && mFullscreenContainer.getVisibility() == View.VISIBLE) {
+                if (mPlayerTopBar != null) mPlayerTopBar.setVisibility(View.VISIBLE);
+                if (mPlayerBottomBar != null) mPlayerBottomBar.setVisibility(View.VISIBLE);
+                if (mGestureController != null) mGestureController.scheduleAutoHideControls();
+            } else {
+                if (mFabSettings != null) mFabSettings.setVisibility(View.VISIBLE);
+                if (mLastStreamUrl != null && mDockVideoSniffer != null) {
+                    mDockVideoSniffer.setVisibility(View.VISIBLE);
+                    mDockVideoSniffer.setAlpha(1.0f);
+                } else if (mLastStreamUrl != null && mPillExternalPlayer != null) {
+                    mPillExternalPlayer.setVisibility(View.VISIBLE);
+                }
             }
             if (mGestureTouchView != null) mGestureTouchView.setVisibility(View.VISIBLE);
             applyEdgeToEdgeImmersive();
@@ -1640,6 +1875,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        try {
+            if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
+        } catch (Exception ignored) {}
+        mHandler.removeCallbacks(mClockUpdateRunnable);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode()) {
             return;
         }
@@ -1657,6 +1897,11 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         applyEdgeToEdgeImmersive();
+        try {
+            registerReceiver(mBatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        } catch (Exception ignored) {}
+        mHandler.post(mClockUpdateRunnable);
+
         if (mCustomView == null && mGestureController != null) {
             mGestureController.restoreDefaultBrightness();
         }
@@ -1694,11 +1939,176 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        try {
+            if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
+        } catch (Exception ignored) {}
+        mHandler.removeCallbacks(mClockUpdateRunnable);
         AppUpdateManager.stopPeriodicUpdateChecker();
         if (mWebView != null) {
             mWebView.destroy();
             mWebView = null;
         }
         super.onDestroy();
+    }
+
+    private String formatTime(long totalSec) {
+        if (totalSec < 0) totalSec = 0;
+        long h = totalSec / 3600;
+        long m = (totalSec % 3600) / 60;
+        long s = totalSec % 60;
+        if (h > 0) {
+            return String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s);
+        } else {
+            return String.format(Locale.getDefault(), "%02d:%02d:%02d", 0, m, s);
+        }
+    }
+
+    private void seekVideoTo(double targetSeconds) {
+        String script =
+            "(function(target) {" +
+            "  function seek(win) {" +
+            "    if (!win) return;" +
+            "    try {" +
+            "      if (win.jwplayer) {" +
+            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
+            "        if (p && typeof p.seek === 'function') p.seek(target);" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var vs = win.document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) {" +
+            "        vs[i].currentTime = target;" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      win.postMessage({ type: 'SISKA_VIDEO_SEEK_TO', target: target }, '*');" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      for (var j = 0; j < win.frames.length; j++) {" +
+            "        seek(win.frames[j]);" +
+            "      }" +
+            "    } catch(e) {}" +
+            "  }" +
+            "  seek(window);" +
+            "})(" + targetSeconds + ");";
+        executeJs(script);
+    }
+
+    private void triggerFullscreenVideo() {
+        String script =
+            "(function() {" +
+            "  function reqFs(win) {" +
+            "    if (!win) return false;" +
+            "    try {" +
+            "      if (win.jwplayer) {" +
+            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
+            "        if (p && typeof p.setFullscreen === 'function') { p.setFullscreen(true); return true; }" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var vs = win.document.querySelectorAll('video');" +
+            "      for (var i = 0; i < vs.length; i++) {" +
+            "        var v = vs[i];" +
+            "        if (v.requestFullscreen) { v.requestFullscreen(); return true; }" +
+            "        else if (v.webkitRequestFullscreen) { v.webkitRequestFullscreen(); return true; }" +
+            "        else if (v.webkitEnterFullscreen) { v.webkitEnterFullscreen(); return true; }" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      for (var j = 0; j < win.frames.length; j++) {" +
+            "        if (reqFs(win.frames[j])) return true;" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    return false;" +
+            "  }" +
+            "  reqFs(window);" +
+            "})();";
+        executeJs(script);
+    }
+
+    private void injectVideoSyncScript(WebView view) {
+        String script =
+            "(function() {" +
+            "  if (window.__siska_sync_injected) return;" +
+            "  window.__siska_sync_injected = true;" +
+            "  window.addEventListener('message', function(e) {" +
+            "    if (e.data && e.data.type === 'SISKA_VIDEO_TIME_UPDATE') {" +
+            "      if (window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
+            "        window.AndroidBridge.onVideoTimeUpdate(e.data.current, e.data.duration, e.data.playing);" +
+            "      }" +
+            "    }" +
+            "  });" +
+            "  setInterval(function() {" +
+            "    try {" +
+            "      var cur = 0, dur = 0, playing = false;" +
+            "      if (window.jwplayer) {" +
+            "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
+            "        if (p && typeof p.getPosition === 'function') {" +
+            "          cur = p.getPosition() || 0;" +
+            "          dur = (typeof p.getDuration === 'function' ? p.getDuration() : 0) || 0;" +
+            "          playing = (typeof p.getState === 'function') ? (p.getState() === 'playing') : false;" +
+            "        }" +
+            "      }" +
+            "      if (!dur) {" +
+            "        var vs = document.querySelectorAll('video');" +
+            "        for (var i = 0; i < vs.length; i++) {" +
+            "          if (vs[i].duration && vs[i].duration > 0) {" +
+            "            cur = vs[i].currentTime || 0;" +
+            "            dur = vs[i].duration || 0;" +
+            "            playing = !vs[i].paused;" +
+            "            break;" +
+            "          }" +
+            "        }" +
+            "      }" +
+            "      if (dur > 0 && window.AndroidBridge && typeof window.AndroidBridge.onVideoTimeUpdate === 'function') {" +
+            "        window.AndroidBridge.onVideoTimeUpdate(cur, dur, playing);" +
+            "      }" +
+            "    } catch(e) {}" +
+            "  }, 500);" +
+            "})();";
+        executeJs(script);
+    }
+
+    public class AndroidBridge {
+        @JavascriptInterface
+        public void onVideoTimeUpdate(final double currentSec, final double totalSec, final boolean isPlaying) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (totalSec > 0 && !Double.isInfinite(totalSec) && !Double.isNaN(totalSec)) {
+                        mVideoDuration = totalSec;
+                    }
+                    if (!mIsUserSeeking) {
+                        if (mTxtTimeCurrent != null) {
+                            mTxtTimeCurrent.setText(formatTime((long) currentSec));
+                        }
+                        if (mTxtTimeTotal != null && mVideoDuration > 0) {
+                            mTxtTimeTotal.setText(formatTime((long) mVideoDuration));
+                        }
+                        if (mPlayerSeekBar != null && mVideoDuration > 0) {
+                            int progress = (int) ((currentSec / mVideoDuration) * 1000);
+                            mPlayerSeekBar.setProgress(progress);
+                        }
+                    }
+                    if (mBtnPlayPause != null) {
+                        mBtnPlayPause.setText(isPlaying ? "⏸" : "▶");
+                    }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void onVideoTitle(final String title) {
+            if (title != null && !title.isEmpty()) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mTxtPlayerTitle != null) {
+                            mTxtPlayerTitle.setText(title);
+                        }
+                    }
+                });
+            }
+        }
     }
 }
