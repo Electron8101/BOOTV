@@ -106,7 +106,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="v1.8"
+                            android:text="v1.9"
                             android:textColor="@color/white"
                             android:textSize="10sp"
                             android:textStyle="bold"
@@ -304,11 +304,77 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⚡ STORAGE &amp; PERFORMANCE"
+                android:text="🚀 OTA UPDATES &amp; BACKGROUND CHECKER"
                 android:textColor="@color/accent_red"
                 android:textSize="11sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="10dp" />
+
+            <!-- Auto Update Switch Row -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_alignParentLeft="true"
+                    android:layout_toLeftOf="@+id/switch_auto_update"
+                    android:layout_marginRight="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Auto-Update Background Checker"
+                        android:textColor="@color/white"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Instantly popup update notification while using the app"
+                        android:textColor="@color/gray"
+                        android:textSize="12sp"
+                        android:layout_marginTop="1dp" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/switch_auto_update"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true" />
+            </RelativeLayout>
+
+            <Button
+                android:id="@+id/btn_check_update"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:text="🔍 Check for Updates Now"
+                android:textColor="@color/white"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:background="@drawable/btn_action_pill"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Thin inner divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#1AFFFFFF"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚡ STORAGE &amp; PERFORMANCE"
+                android:textColor="@color/accent_red"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="6dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -317,17 +383,6 @@
                 android:textColor="@color/gray"
                 android:textSize="12sp"
                 android:layout_marginBottom="10dp" />
-
-            <Button
-                android:id="@+id/btn_check_update"
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:text="🚀 Check for App Updates"
-                android:textColor="@color/white"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:background="@drawable/btn_action_pill"
-                android:layout_marginBottom="8dp" />
 
             <Button
                 android:id="@+id/btn_clear_cache"

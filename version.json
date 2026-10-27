@@ -1,6 +1,8 @@
 {
-  "versionCode": 13,
-  "versionName": "1.8",
+  "versionCode": 14,
+  "versionName": "1.9",
+  "minRequiredVersion": 14,
+  "forceUpdate": true,
   "apkUrl": "https://raw.githubusercontent.com/Electron8101/BOOTV/main/BOOTV.apk",
-  "changelog": "- more smooth ui\n- OTA supported\n- New stylish metallic red BTV app icon\n- Universal Android 5.0 to 15+ device compatibility"
+  "changelog": "🚨 MANDATORY UPDATE 🚨\n- Previous versions have been discontinued\n- Must update to latest version to continue watching\n- Auto-update background checker enabled\n- Instant update popup notification while using app"
 }

@@ -240,6 +240,12 @@ public class MainActivity extends Activity {
     private View mLockOverlay;
     private View mDot1, mDot2, mDot3, mDot4;
 
+    // Mandatory Update Lockout
+    private View mLayoutUpdateLockout;
+    private TextView mTxtLockoutVersionInfo;
+    private Button mBtnLockoutUpdate;
+    private Button mBtnLockoutExit;
+
     private int mOriginalOrientation;
     private String mUserAgentString;
 
@@ -289,6 +295,12 @@ public class MainActivity extends Activity {
         mDot3 = findViewById(R.id.dot_3);
         mDot4 = findViewById(R.id.dot_4);
 
+        // Mandatory Update Lockout
+        mLayoutUpdateLockout = findViewById(R.id.layout_update_lockout);
+        mTxtLockoutVersionInfo = findViewById(R.id.txt_lockout_version_info);
+        mBtnLockoutUpdate = findViewById(R.id.btn_lockout_update);
+        mBtnLockoutExit = findViewById(R.id.btn_lockout_exit);
+
         setupGestureController();
         setupWebView();
         setupSettingsAndKeypad();
@@ -312,15 +324,9 @@ public class MainActivity extends Activity {
             mWebView.loadUrl(TARGET_URL);
         }
 
-        // Automatic background OTA update check
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (!isFinishing()) {
-                    AppUpdateManager.checkForUpdates(MainActivity.this, false);
-                }
-            }
-        }, 2500);
+        // Start periodic background OTA update checker
+        AppUpdateManager.startPeriodicUpdateChecker(this);
+        handleUpdateIntent(getIntent());
     }
 
     private void showBootloopSignaturePopup() {
@@ -652,6 +658,24 @@ public class MainActivity extends Activity {
             }
         });
 
+        Switch switchAutoUpdate = dialogView.findViewById(R.id.switch_auto_update);
+        if (switchAutoUpdate != null) {
+            switchAutoUpdate.setChecked(AppUpdateManager.isAutoUpdateEnabled(MainActivity.this));
+            switchAutoUpdate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    AppUpdateManager.setAutoUpdateEnabled(MainActivity.this, isChecked);
+                    if (isChecked) {
+                        AppUpdateManager.startPeriodicUpdateChecker(MainActivity.this);
+                        Toast.makeText(MainActivity.this, "Auto-update background checker enabled", Toast.LENGTH_SHORT).show();
+                    } else {
+                        AppUpdateManager.stopPeriodicUpdateChecker();
+                        Toast.makeText(MainActivity.this, "Auto-update background checker disabled", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
         Button btnCheckUpdate = dialogView.findViewById(R.id.btn_check_update);
         if (btnCheckUpdate != null) {
             btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
@@ -781,7 +805,7 @@ public class MainActivity extends Activity {
         }, 150);
     }
 
-    private void applyEdgeToEdgeImmersive() {
+    public void applyEdgeToEdgeImmersive() {
         int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                 | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
@@ -1357,8 +1381,50 @@ public class MainActivity extends Activity {
         mCustomViewCallback = null;
     }
 
+    public void enforceUpdateLockout(final String remoteVersionName, final String changelog, final String apkUrl) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (mLayoutUpdateLockout != null) {
+                    mLayoutUpdateLockout.setVisibility(View.VISIBLE);
+                    mLayoutUpdateLockout.bringToFront();
+                    if (mTxtLockoutVersionInfo != null) {
+                        mTxtLockoutVersionInfo.setText("BOOTV v" + remoteVersionName + " is required to continue.");
+                    }
+                    if (mBtnLockoutUpdate != null) {
+                        mBtnLockoutUpdate.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                AppUpdateManager.checkForUpdates(MainActivity.this, true);
+                            }
+                        });
+                    }
+                    if (mBtnLockoutExit != null) {
+                        mBtnLockoutExit.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                finishAffinity();
+                                System.exit(0);
+                            }
+                        });
+                    }
+                }
+                if (mWebView != null) {
+                    mWebView.onPause();
+                    mWebView.pauseTimers();
+                }
+            }
+        });
+    }
+
     @Override
     public void onBackPressed() {
+        if (mLayoutUpdateLockout != null && mLayoutUpdateLockout.getVisibility() == View.VISIBLE) {
+            finishAffinity();
+            System.exit(0);
+            return;
+        }
+
         // If locked, back button should not bypass lock
         if (mLockOverlay.getVisibility() == View.VISIBLE) {
             finish();
@@ -1409,6 +1475,20 @@ public class MainActivity extends Activity {
         if (mWebView != null) {
             mWebView.onResume();
         }
+        AppUpdateManager.startPeriodicUpdateChecker(this);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleUpdateIntent(intent);
+    }
+
+    private void handleUpdateIntent(Intent intent) {
+        if (intent != null && intent.getBooleanExtra(AppUpdateManager.EXTRA_SHOW_UPDATE, false)) {
+            AppUpdateManager.checkForUpdates(this, true);
+        }
     }
 
     @Override
@@ -1421,6 +1501,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        AppUpdateManager.stopPeriodicUpdateChecker();
         if (mWebView != null) {
             mWebView.destroy();
             mWebView = null;

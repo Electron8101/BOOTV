@@ -2,8 +2,14 @@ package tv.bootv.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -27,16 +33,91 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class AppUpdateManager {
 
+    public static final String EXTRA_SHOW_UPDATE = "tv.bootv.app.EXTRA_SHOW_UPDATE";
     private static final String REMOTE_VERSION_URL =
             "https://raw.githubusercontent.com/Electron8101/BOOTV/main/version.json";
 
+    private static final String PREF_NAME = "bootv_update_prefs";
+    private static final String KEY_AUTO_UPDATE = "pref_auto_update_enabled";
+    private static final String KEY_LAST_DISMISSED_VERSION = "pref_last_dismissed_version";
+    private static final String KEY_LAST_DISMISSED_TIME = "pref_last_dismissed_time";
+
+    private static final long DISMISS_SNOOZE_MS = 30 * 60 * 1000L; // 30 minutes snooze on 'Later'
+    private static final String NOTIFICATION_CHANNEL_ID = "bootv_ota_channel";
+    private static final int NOTIFICATION_ID = 2001;
+
+    private static ScheduledExecutorService sScheduler;
+    private static WeakReference<Activity> sCurrentActivityRef;
+    private static AlertDialog sCurrentDialog;
+    private static volatile boolean sIsChecking = false;
+
+    public static boolean isAutoUpdateEnabled(Context context) {
+        if (context == null) return true;
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_AUTO_UPDATE, true);
+    }
+
+    public static void setAutoUpdateEnabled(Context context, boolean enabled) {
+        if (context == null) return;
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_AUTO_UPDATE, enabled).apply();
+    }
+
+    public static synchronized void startPeriodicUpdateChecker(final Activity activity) {
+        if (activity == null) return;
+        sCurrentActivityRef = new WeakReference<>(activity);
+
+        if (!isAutoUpdateEnabled(activity)) {
+            return;
+        }
+
+        if (sScheduler != null && !sScheduler.isShutdown()) {
+            return;
+        }
+
+        sScheduler = Executors.newSingleThreadScheduledExecutor();
+        sScheduler.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (sCurrentActivityRef == null) return;
+                    final Activity act = sCurrentActivityRef.get();
+                    if (act == null || act.isFinishing()) return;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && act.isDestroyed()) return;
+
+                    if (isAutoUpdateEnabled(act)) {
+                        checkForUpdates(act, false);
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        }, 2, 300, TimeUnit.SECONDS); // Check 2 seconds after startup, then every 5 minutes while running
+    }
+
+    public static synchronized void stopPeriodicUpdateChecker() {
+        if (sScheduler != null && !sScheduler.isShutdown()) {
+            try {
+                sScheduler.shutdownNow();
+            } catch (Exception ignored) {}
+            sScheduler = null;
+        }
+    }
+
     public static void checkForUpdates(final Activity activity, final boolean isManualCheck) {
         if (activity == null || activity.isFinishing()) return;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && activity.isDestroyed()) return;
+
+        if (sIsChecking && !isManualCheck) return;
+        sIsChecking = true;
 
         new Thread(new Runnable() {
             @Override
@@ -52,7 +133,7 @@ public class AppUpdateManager {
                     conn.connect();
 
                     if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                        if (isManualCheck) showToast(activity, "Unable to check for updates right now");
+                        if (isManualCheck) showToast(activity, "Unable to reach update server right now");
                         return;
                     }
 
@@ -72,7 +153,7 @@ public class AppUpdateManager {
 
                     PackageManager pm = activity.getPackageManager();
                     PackageInfo pInfo = pm.getPackageInfo(activity.getPackageName(), 0);
-                    long currentVersionCode = 0;
+                    long currentVersionCode;
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         currentVersionCode = pInfo.getLongVersionCode();
                     } else {
@@ -82,11 +163,25 @@ public class AppUpdateManager {
                     final String currentVersionName = pInfo.versionName;
 
                     if (remoteVersionCode > currentVersionCode && !apkUrl.isEmpty()) {
+                        final boolean forceUpdate = json.optBoolean("forceUpdate", true);
+
+                        // If forceUpdate is true, old versions MUST update! No snooze or bypass allowed!
+                        if (!forceUpdate && !isManualCheck && isDismissedRecently(activity, remoteVersionCode)) {
+                            return;
+                        }
+
+                        // Post System Notification (Status Bar)
+                        postSystemUpdateNotification(activity, remoteVersionName, changelog);
+
+                        // Trigger Lockout and Instant On-Screen Popup
                         activity.runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                if (!activity.isFinishing()) {
-                                    showUpdateDialog(activity, remoteVersionName, currentVersionName, apkUrl, changelog);
+                                if (!activity.isFinishing() && (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR1 || !activity.isDestroyed())) {
+                                    if (forceUpdate && activity instanceof MainActivity) {
+                                        ((MainActivity) activity).enforceUpdateLockout(remoteVersionName, changelog, apkUrl);
+                                    }
+                                    showUpdateDialog(activity, remoteVersionName, currentVersionName, apkUrl, changelog, remoteVersionCode, forceUpdate);
                                 }
                             }
                         });
@@ -99,6 +194,7 @@ public class AppUpdateManager {
                         showToast(activity, "Check failed: " + e.getMessage());
                     }
                 } finally {
+                    sIsChecking = false;
                     if (conn != null) {
                         try { conn.disconnect(); } catch (Exception ignored) {}
                     }
@@ -107,18 +203,91 @@ public class AppUpdateManager {
         }).start();
     }
 
+    private static boolean isDismissedRecently(Context context, int versionCode) {
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        int dismissedVersion = prefs.getInt(KEY_LAST_DISMISSED_VERSION, -1);
+        long dismissedTime = prefs.getLong(KEY_LAST_DISMISSED_TIME, 0);
+        if (dismissedVersion == versionCode) {
+            long elapsed = System.currentTimeMillis() - dismissedTime;
+            return elapsed < DISMISS_SNOOZE_MS;
+        }
+        return false;
+    }
+
+    private static void postSystemUpdateNotification(Context context, String remoteVersionName, String changelog) {
+        try {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) return;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel channel = new NotificationChannel(
+                        NOTIFICATION_CHANNEL_ID,
+                        "BOOTV App Updates",
+                        NotificationManager.IMPORTANCE_HIGH
+                );
+                channel.setDescription("Instant alerts for new BOOTV app updates");
+                channel.enableLights(true);
+                channel.setLightColor(0xFFFF3333);
+                channel.enableVibration(true);
+                nm.createNotificationChannel(channel);
+            }
+
+            Intent intent = new Intent(context, MainActivity.class);
+            intent.putExtra(EXTRA_SHOW_UPDATE, true);
+            intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                flags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+            PendingIntent pi = PendingIntent.getActivity(context, 101, intent, flags);
+
+            Notification.Builder nb;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nb = new Notification.Builder(context, NOTIFICATION_CHANNEL_ID);
+            } else {
+                nb = new Notification.Builder(context);
+                nb.setPriority(Notification.PRIORITY_HIGH);
+            }
+
+            nb.setSmallIcon(R.mipmap.ic_launcher)
+              .setContentTitle("⚡ BOOTV Update Available: v" + remoteVersionName)
+              .setContentText("A new update is available. Tap to install now.")
+              .setAutoCancel(true)
+              .setContentIntent(pi);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                nb.setStyle(new Notification.BigTextStyle()
+                        .setBigContentTitle("⚡ BOOTV v" + remoteVersionName + " Available")
+                        .bigText("Changelog:\n" + changelog + "\n\nTap to install the latest version immediately."));
+            }
+
+            nm.notify(NOTIFICATION_ID, nb.build());
+        } catch (Throwable ignored) {
+        }
+    }
+
     private static void showUpdateDialog(final Activity activity,
                                          final String remoteVersionName,
                                          final String currentVersionName,
                                          final String apkUrl,
-                                         final String changelog) {
+                                         final String changelog,
+                                         final int remoteVersionCode,
+                                         final boolean forceUpdate) {
+        if (sCurrentDialog != null && sCurrentDialog.isShowing()) {
+            return;
+        }
+
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
         LayoutInflater inflater = activity.getLayoutInflater();
         final View dialogView = inflater.inflate(R.layout.dialog_update, null);
         builder.setView(dialogView);
-        builder.setCancelable(true);
+        builder.setCancelable(!forceUpdate);
 
         final AlertDialog dialog = builder.create();
+        dialog.setCanceledOnTouchOutside(!forceUpdate);
+        sCurrentDialog = dialog;
+
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
@@ -134,23 +303,54 @@ public class AppUpdateManager {
         final Button btnUpdate = dialogView.findViewById(R.id.btn_update_now);
 
         txtVersionTitle.setText("Update to v" + remoteVersionName);
-        txtVersionSubtitle.setText("Current: v" + currentVersionName + " • Ready to install");
+        if (forceUpdate) {
+            txtVersionSubtitle.setText("Mandatory Update • Previous versions discontinued");
+            btnCancel.setText("Exit App");
+        } else {
+            txtVersionSubtitle.setText("Current: v" + currentVersionName + " • Ready to install");
+            btnCancel.setText("Later");
+        }
         txtChangelog.setText(changelog);
 
         btnCancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dialog.dismiss();
+                if (forceUpdate) {
+                    activity.finishAffinity();
+                    System.exit(0);
+                } else {
+                    SharedPreferences prefs = activity.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+                    prefs.edit()
+                            .putInt(KEY_LAST_DISMISSED_VERSION, remoteVersionCode)
+                            .putLong(KEY_LAST_DISMISSED_TIME, System.currentTimeMillis())
+                            .apply();
+                    dialog.dismiss();
+                }
             }
         });
 
         btnUpdate.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                SharedPreferences prefs = activity.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+                prefs.edit().remove(KEY_LAST_DISMISSED_VERSION).remove(KEY_LAST_DISMISSED_TIME).apply();
+
                 btnUpdate.setEnabled(false);
                 btnCancel.setEnabled(false);
                 layoutProgress.setVisibility(View.VISIBLE);
                 startDownload(activity, apkUrl, pbDownload, txtStatus, txtPercent, dialog);
+            }
+        });
+
+        dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface d) {
+                if (sCurrentDialog == dialog) {
+                    sCurrentDialog = null;
+                }
+                if (activity instanceof MainActivity) {
+                    ((MainActivity) activity).applyEdgeToEdgeImmersive();
+                }
             }
         });
 
