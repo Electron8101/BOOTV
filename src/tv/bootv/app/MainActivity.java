@@ -347,6 +347,7 @@ public class MainActivity extends Activity {
 
     // Battery Receiver & Clock Updater
     private BroadcastReceiver mBatteryReceiver;
+    private boolean mIsBatteryReceiverRegistered = false;
     private final Runnable mClockUpdateRunnable = new Runnable() {
         @Override
         public void run() {
@@ -1806,6 +1807,9 @@ public class MainActivity extends Activity {
     }
 
     public void enforceUpdateLockout(final String remoteVersionName, final String changelog, final String apkUrl) {
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            return;
+        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -1903,6 +1907,9 @@ public class MainActivity extends Activity {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
+                    if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+                        return;
+                    }
                     mLastStreamUrl = finalUrl;
                     mLastStreamFormat = finalFormat;
                     if (mBtnFullscreenExtPlayer != null) {
@@ -1996,9 +2003,12 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        try {
-            if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
-        } catch (Exception ignored) {}
+        if (mIsBatteryReceiverRegistered) {
+            try {
+                if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
+            } catch (Exception ignored) {}
+            mIsBatteryReceiverRegistered = false;
+        }
         mHandler.removeCallbacks(mClockUpdateRunnable);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode()) {
@@ -2018,9 +2028,12 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         applyEdgeToEdgeImmersive();
-        try {
-            registerReceiver(mBatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-        } catch (Exception ignored) {}
+        if (!mIsBatteryReceiverRegistered) {
+            try {
+                registerReceiver(mBatteryReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+                mIsBatteryReceiverRegistered = true;
+            } catch (Exception ignored) {}
+        }
         mHandler.post(mClockUpdateRunnable);
 
         if (mCustomView == null && mGestureController != null) {
@@ -2060,19 +2073,32 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        try {
-            if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
-        } catch (Exception ignored) {}
+        if (mIsBatteryReceiverRegistered) {
+            try {
+                if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
+            } catch (Exception ignored) {}
+            mIsBatteryReceiverRegistered = false;
+        }
         mHandler.removeCallbacks(mClockUpdateRunnable);
+        mHandler.removeCallbacksAndMessages(null);
         AppUpdateManager.stopPeriodicUpdateChecker();
         if (mWebView != null) {
-            mWebView.destroy();
+            try {
+                mWebView.stopLoading();
+                mWebView.loadUrl("about:blank");
+                mWebView.clearHistory();
+                mWebView.removeAllViews();
+                mWebView.destroy();
+            } catch (Exception ignored) {}
             mWebView = null;
         }
         super.onDestroy();
     }
 
     private void updatePlaybackProgress(final double currentSec, final double totalSec, final boolean isPlaying) {
+        if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+            return;
+        }
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -2326,6 +2352,9 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void onVideoTitle(final String title) {
             if (title != null && !title.isEmpty()) {
+                if (isFinishing() || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1 && isDestroyed())) {
+                    return;
+                }
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
