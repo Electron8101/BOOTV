@@ -794,12 +794,25 @@ public class MainActivity extends Activity {
 
         View btnClose = dialogView.findViewById(R.id.btn_close_settings);
         Button btnDone = dialogView.findViewById(R.id.btn_done_settings);
+        final View rowPinLock = dialogView.findViewById(R.id.row_pin_lock);
         final Switch switchPin = dialogView.findViewById(R.id.switch_pin_lock);
         final Button btnChangePin = dialogView.findViewById(R.id.btn_change_pin);
         final Button btnRemovePin = dialogView.findViewById(R.id.btn_remove_pin);
         final Button btnLockNow = dialogView.findViewById(R.id.btn_lock_now);
+        final View rowFingerprint = dialogView.findViewById(R.id.row_fingerprint);
         final Switch switchFingerprint = dialogView.findViewById(R.id.switch_fingerprint);
+        final View rowAutoUpdate = dialogView.findViewById(R.id.row_auto_update);
+        final Switch switchAutoUpdate = dialogView.findViewById(R.id.switch_auto_update);
         Button btnClearCache = dialogView.findViewById(R.id.btn_clear_cache);
+
+        if (rowPinLock != null) {
+            rowPinLock.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    switchPin.toggle();
+                }
+            });
+        }
 
         final Runnable refreshPinButtons = new Runnable() {
             @Override
@@ -911,13 +924,37 @@ public class MainActivity extends Activity {
             }
         });
 
+        if (rowFingerprint != null) {
+            rowFingerprint.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (!mSecurityManager.isBiometricSupported()) {
+                        Toast.makeText(MainActivity.this, "Fingerprint not available or not enrolled in device settings", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (!mSecurityManager.isPinSet() || !mSecurityManager.isLockEnabled()) {
+                        Toast.makeText(MainActivity.this, "Enable PIN lock first to use Fingerprint unlock", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    switchFingerprint.toggle();
+                }
+            });
+        }
+
         switchFingerprint.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked && !mSecurityManager.isBiometricSupported()) {
-                    Toast.makeText(MainActivity.this, "Fingerprint hardware not available on this device", Toast.LENGTH_SHORT).show();
-                    switchFingerprint.setChecked(false);
-                    return;
+                if (isChecked) {
+                    if (!mSecurityManager.isBiometricSupported()) {
+                        Toast.makeText(MainActivity.this, "Fingerprint not available or not enrolled in device settings", Toast.LENGTH_SHORT).show();
+                        switchFingerprint.setChecked(false);
+                        return;
+                    }
+                    if (!mSecurityManager.isPinSet() || !mSecurityManager.isLockEnabled()) {
+                        Toast.makeText(MainActivity.this, "Enable PIN lock first to use Fingerprint unlock", Toast.LENGTH_SHORT).show();
+                        switchFingerprint.setChecked(false);
+                        return;
+                    }
                 }
                 mSecurityManager.setBiometricEnabled(isChecked);
             }
@@ -929,12 +966,12 @@ public class MainActivity extends Activity {
                 mWebView.clearCache(true);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     CookieManager.getInstance().removeAllCookies(null);
+                    CookieManager.getInstance().flush();
                 }
                 Toast.makeText(MainActivity.this, "Cache and Cookies cleared successfully!", Toast.LENGTH_SHORT).show();
             }
         });
 
-        Switch switchAutoUpdate = dialogView.findViewById(R.id.switch_auto_update);
         if (switchAutoUpdate != null) {
             switchAutoUpdate.setChecked(AppUpdateManager.isAutoUpdateEnabled(MainActivity.this));
             switchAutoUpdate.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
@@ -947,6 +984,17 @@ public class MainActivity extends Activity {
                     } else {
                         AppUpdateManager.stopPeriodicUpdateChecker();
                         Toast.makeText(MainActivity.this, "Auto-update background checker disabled", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
+
+        if (rowAutoUpdate != null) {
+            rowAutoUpdate.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (switchAutoUpdate != null) {
+                        switchAutoUpdate.toggle();
                     }
                 }
             });
