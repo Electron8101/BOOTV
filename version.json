@@ -1,8 +1,8 @@
 {
-  "versionCode": 15,
-  "versionName": "2.0",
-  "minRequiredVersion": 15,
+  "versionCode": 16,
+  "versionName": "2.1",
+  "minRequiredVersion": 16,
   "forceUpdate": true,
   "apkUrl": "https://raw.githubusercontent.com/Electron8101/BOOTV/main/BOOTV.apk",
-  "changelog": "🚨 MANDATORY UPDATE 🚨\n- Previous versions have been discontinued\n- Must update to latest version to continue watching\n- Popup cannot be dismissed; pressing Later will close the app\n- Auto-update background checker enabled"
+  "changelog": "🛡️ SECURITY UPDATE (v2.1) 🛡️\n- Multi-layer dynamic string encryption\n- Cryptographic signature self-verification\n- Anti-clone & anti-tamper security guard\n- R8 bytecode obfuscation & minification\n- Mandatory update policy enforced"
 }

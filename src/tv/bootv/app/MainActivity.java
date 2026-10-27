@@ -49,8 +49,8 @@ import java.net.URL;
 
 public class MainActivity extends Activity {
 
-    private static final String TARGET_URL = "https://siska.tv/";
-    private static final String MAIN_DOMAIN = "siska.tv";
+    private static final String TARGET_URL = AppGuard.getTargetUrl();
+    private static final String MAIN_DOMAIN = AppGuard.getMainDomain();
 
     // Known ad networks, popunder CDNs, and telemetry hosts
     private static final String[] AD_HOST_KEYWORDS = {
@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
         "        }" +
         "        var href = target.getAttribute('href') || '';" +
         "        if (href && (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//'))) {" +
-        "          if (!href.includes('siska.tv')) {" +
+        "          if (!href.includes('" + MAIN_DOMAIN + "')) {" +
         "            e.preventDefault();" +
         "            e.stopPropagation();" +
         "          }" +
@@ -252,6 +252,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Enterprise runtime integrity, signature & anti-cloning verification
+        if (!AppGuard.verifyIntegrity(this)) {
+            return;
+        }
 
         mSecurityManager = new SecurityManager(this);
 
@@ -692,7 +697,7 @@ public class MainActivity extends Activity {
                 @Override
                 public void onClick(View v) {
                     try {
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/BOOTLOOP1"));
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(AppGuard.getTelegramUrl()));
                         startActivity(intent);
                     } catch (Exception e) {
                         Toast.makeText(MainActivity.this, "Unable to open Telegram link", Toast.LENGTH_SHORT).show();
@@ -1100,7 +1105,7 @@ public class MainActivity extends Activity {
             conn.setConnectTimeout(5000);
             conn.setReadTimeout(5000);
             conn.setRequestProperty("User-Agent", mUserAgentString);
-            conn.setRequestProperty("Referer", "https://siska.tv/");
+            conn.setRequestProperty("Referer", TARGET_URL);
             conn.setInstanceFollowRedirects(true);
 
             int status = conn.getResponseCode();

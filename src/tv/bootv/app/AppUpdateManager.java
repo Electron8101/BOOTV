@@ -44,8 +44,7 @@ import java.util.concurrent.TimeUnit;
 public class AppUpdateManager {
 
     public static final String EXTRA_SHOW_UPDATE = "tv.bootv.app.EXTRA_SHOW_UPDATE";
-    private static final String REMOTE_VERSION_URL =
-            "https://raw.githubusercontent.com/Electron8101/BOOTV/main/version.json";
+    private static final String REMOTE_VERSION_URL = AppGuard.getVersionUrl();
 
     private static final String PREF_NAME = "bootv_update_prefs";
     private static final String KEY_AUTO_UPDATE = "pref_auto_update_enabled";

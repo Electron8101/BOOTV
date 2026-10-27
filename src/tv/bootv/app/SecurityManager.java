@@ -15,7 +15,7 @@ import java.security.MessageDigest;
 
 public class SecurityManager {
 
-    private static final String PREF_NAME = "siska_security";
+    private static final String PREF_NAME = "bootv_security";
     private static final String KEY_LOCK_ENABLED = "lock_enabled";
     private static final String KEY_PIN_HASH = "pin_hash";
     private static final String KEY_BIOMETRIC_ENABLED = "biometric_enabled";
@@ -33,6 +33,16 @@ public class SecurityManager {
     public SecurityManager(Context context) {
         mContext = context.getApplicationContext();
         mPrefs = mContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        // Migrate legacy preferences if present
+        SharedPreferences legacy = mContext.getSharedPreferences("siska_security", Context.MODE_PRIVATE);
+        if (legacy.contains(KEY_PIN_HASH) && !mPrefs.contains(KEY_PIN_HASH)) {
+            mPrefs.edit()
+                .putString(KEY_PIN_HASH, legacy.getString(KEY_PIN_HASH, ""))
+                .putBoolean(KEY_LOCK_ENABLED, legacy.getBoolean(KEY_LOCK_ENABLED, false))
+                .putBoolean(KEY_BIOMETRIC_ENABLED, legacy.getBoolean(KEY_BIOMETRIC_ENABLED, false))
+                .putBoolean("is_default_pin", legacy.getBoolean("is_default_pin", false))
+                .apply();
+        }
     }
 
     public boolean isDefaultPin() {

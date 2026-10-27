@@ -43,11 +43,19 @@ javac -source 8 -target 8 -proc:none \
   -d build/obj \
   $(find build/gen src -name "*.java")
 
-# 4. Dexing with d8 (optimized for min-api 21)
-echo "=== [4/5] Dexing bytecode with d8 ==="
-d8 --min-api 21 --lib "$ANDROID_JAR" \
-  --output build/apk \
-  $(find build/obj -name "*.class")
+# 4. Dexing & Obfuscation with R8 (ProGuard minification)
+echo "=== [4/5] Obfuscating & Dexing bytecode with R8 ==="
+if [ -f proguard-rules.pro ] && command -v r8 >/dev/null 2>&1; then
+  r8 --release --min-api 21 \
+    --lib "$ANDROID_JAR" \
+    --pg-conf proguard-rules.pro \
+    --output build/apk \
+    $(find build/obj -name "*.class")
+else
+  d8 --min-api 21 --lib "$ANDROID_JAR" \
+    --output build/apk \
+    $(find build/obj -name "*.class")
+fi
 
 (cd build/apk && zip -u -q ../unaligned.apk classes.dex)
 
