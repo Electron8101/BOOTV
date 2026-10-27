@@ -36,6 +36,8 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
+import android.webkit.PermissionRequest;
 import android.webkit.RenderProcessGoneDetail;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -1547,17 +1549,27 @@ public class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
 
-        // Media streaming optimizations & render priority
+        // Media streaming optimizations & hardware accelerated render priority
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
 
+        // Maximum network & resource caching (Fast back-forward navigation & offline chunking)
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        // Enable HTML5 Database Storage
+        try {
+            java.io.File dbDir = new java.io.File(getFilesDir(), "databases");
+            if (!dbDir.exists()) dbDir.mkdirs();
+            settings.setDatabasePath(dbDir.getAbsolutePath());
+        } catch (Exception ignored) {}
+
         // Performance & latency optimizations
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false);
         }
-        settings.setGeolocationEnabled(false);
+        settings.setGeolocationEnabled(true);
         settings.setSaveFormData(false);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -1567,7 +1579,7 @@ public class MainActivity extends Activity {
             cookieManager.setAcceptThirdPartyCookies(mWebView, true);
         }
 
-        // Clean user agent
+        // Clean, modern desktop-class Chrome mobile user agent (prevents degraded mobile fallback video players)
         String defaultUa = settings.getUserAgentString();
         if (defaultUa != null) {
             mUserAgentString = defaultUa.replace("; wv", "");
@@ -1576,11 +1588,12 @@ public class MainActivity extends Activity {
             mUserAgentString = "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36";
         }
 
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-
         mWebView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
         mWebView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
         mWebView.setScrollbarFadingEnabled(true);
+        mWebView.setVerticalScrollBarEnabled(false);
+        mWebView.setHorizontalScrollBarEnabled(false);
+        mWebView.setDrawingCacheEnabled(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             mWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         }
@@ -1593,6 +1606,9 @@ public class MainActivity extends Activity {
                 mProgressBar.setVisibility(View.VISIBLE);
                 mErrorLayout.setVisibility(View.GONE);
                 injectAdBlockScript(view);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    CookieManager.getInstance().flush();
+                }
             }
 
             @Override
@@ -1600,6 +1616,9 @@ public class MainActivity extends Activity {
                 mProgressBar.setVisibility(View.GONE);
                 injectAdBlockScript(view);
                 injectVideoSyncScript(view);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    CookieManager.getInstance().flush();
+                }
                 String title = view.getTitle();
                 if (title != null && !title.isEmpty() && mTxtPlayerTitle != null) {
                     mTxtPlayerTitle.setText(title);
@@ -1638,7 +1657,7 @@ public class MainActivity extends Activity {
                     }
                     checkAndCaptureStreamUrl(url);
                     boolean isEmbedCandidate = (url.contains("/e/") || url.contains("/embed/") || url.contains("/stream/") || url.contains("/v/") || url.contains("/player/"))
-                            && !url.contains(".js") && !url.contains(".css") && !url.contains(".png") && !url.contains(".jpg") && !url.contains(".m3u8") && !url.contains(".ts") && !url.contains(".mp4");
+                            && !url.contains(".js") && !url.contains(".css") && !url.contains(".png") && !url.contains(".jpg") && !url.contains(".m3u8") && !url.contains(".ts") && !url.contains(".mp4") && !url.contains(".mpd") && !url.contains(".webm") && !url.contains(".mkv") && !url.contains(".flv") && !url.contains(".mov") && !url.contains(".m4v");
                     if (isEmbedCandidate) {
                         WebResourceResponse injected = injectBridgeIntoEmbed(url);
                         if (injected != null) return injected;
@@ -1656,7 +1675,7 @@ public class MainActivity extends Activity {
                 if (url != null) {
                     checkAndCaptureStreamUrl(url);
                     boolean isEmbedCandidate = (url.contains("/e/") || url.contains("/embed/") || url.contains("/stream/") || url.contains("/v/") || url.contains("/player/"))
-                            && !url.contains(".js") && !url.contains(".css") && !url.contains(".png") && !url.contains(".jpg") && !url.contains(".m3u8") && !url.contains(".ts") && !url.contains(".mp4");
+                            && !url.contains(".js") && !url.contains(".css") && !url.contains(".png") && !url.contains(".jpg") && !url.contains(".m3u8") && !url.contains(".ts") && !url.contains(".mp4") && !url.contains(".mpd") && !url.contains(".webm") && !url.contains(".mkv") && !url.contains(".flv") && !url.contains(".mov") && !url.contains(".m4v");
                     if (isEmbedCandidate) {
                         WebResourceResponse injected = injectBridgeIntoEmbed(url);
                         if (injected != null) return injected;
@@ -1719,6 +1738,30 @@ public class MainActivity extends Activity {
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
                 return false;
+            }
+
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                if (request != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    try {
+                        request.grant(request.getResources());
+                    } catch (Exception e) {
+                        try { request.deny(); } catch (Exception ignored) {}
+                    }
+                }
+            }
+
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                if (callback != null) {
+                    callback.invoke(origin, false, false);
+                }
+            }
+
+            @Override
+            public Bitmap getDefaultVideoPoster() {
+                // Return a 1x1 transparent bitmap to prevent grey placeholder boxes while loading media
+                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
             }
 
             @Override
@@ -1889,16 +1932,22 @@ public class MainActivity extends Activity {
         if (url == null || url.isEmpty()) return;
         String lower = url.toLowerCase();
         String format = null;
-        if (lower.contains(".m3u8")) {
+        if (lower.contains(".m3u8") || lower.contains("/hls/") || lower.contains("format=hls") || lower.contains("format=m3u8") || lower.contains("m3u8?") || lower.contains("playlist.m3u8")) {
             format = "HLS";
-        } else if (lower.contains(".mpd")) {
+        } else if (lower.contains(".mpd") || lower.contains("/dash/") || lower.contains("format=mpd") || lower.contains("mpd?") || lower.contains("manifest.mpd")) {
             format = "DASH";
-        } else if (lower.contains(".mp4")) {
+        } else if (lower.contains(".mp4") || lower.contains("video/mp4") || lower.contains("mime=video%2fmp4") || lower.contains("mime=video/mp4") || lower.contains("mp4?")) {
             format = "MP4";
-        } else if (lower.contains(".webm")) {
+        } else if (lower.contains(".webm") || lower.contains("video/webm") || lower.contains("mime=video%2fwebm") || lower.contains("webm?")) {
             format = "WEBM";
-        } else if (lower.contains(".mkv")) {
+        } else if (lower.contains(".mkv") || lower.contains("video/x-matroska") || lower.contains("mkv?")) {
             format = "MKV";
+        } else if (lower.contains(".flv") || lower.contains("/flv/") || lower.contains("video/x-flv") || lower.contains("flv?")) {
+            format = "FLV";
+        } else if (lower.contains(".mov") || lower.contains("video/quicktime") || lower.contains("mov?")) {
+            format = "MOV";
+        } else if (lower.contains(".m4v") || lower.contains("video/x-m4v") || lower.contains("m4v?")) {
+            format = "M4V";
         }
 
         if (format != null && !isAdOrTracker(url)) {
@@ -1930,11 +1979,14 @@ public class MainActivity extends Activity {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             Uri uri = Uri.parse(url);
             String mimeType = "video/*";
-            if (url.contains(".m3u8")) mimeType = "application/x-mpegURL";
-            else if (url.contains(".mpd")) mimeType = "application/dash+xml";
-            else if (url.contains(".mp4")) mimeType = "video/mp4";
-            else if (url.contains(".webm")) mimeType = "video/webm";
-            else if (url.contains(".mkv")) mimeType = "video/x-matroska";
+            if (url.contains(".m3u8") || "HLS".equals(format)) mimeType = "application/x-mpegURL";
+            else if (url.contains(".mpd") || "DASH".equals(format)) mimeType = "application/dash+xml";
+            else if (url.contains(".mp4") || "MP4".equals(format)) mimeType = "video/mp4";
+            else if (url.contains(".webm") || "WEBM".equals(format)) mimeType = "video/webm";
+            else if (url.contains(".mkv") || "MKV".equals(format)) mimeType = "video/x-matroska";
+            else if (url.contains(".flv") || "FLV".equals(format)) mimeType = "video/x-flv";
+            else if (url.contains(".mov") || "MOV".equals(format)) mimeType = "video/quicktime";
+            else if (url.contains(".m4v") || "M4V".equals(format)) mimeType = "video/x-m4v";
 
             intent.setDataAndType(uri, mimeType);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
