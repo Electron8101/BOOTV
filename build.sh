@@ -75,14 +75,16 @@ apksigner sign --ks debug.keystore \
 # Direct deployment to Download folder
 DOWNLOAD_DIR="/storage/emulated/0/Download"
 if [ -d "$DOWNLOAD_DIR" ]; then
-  cp -f BOOTV.apk "$DOWNLOAD_DIR/BOOTV.apk"
+  (rm -f "$DOWNLOAD_DIR/BOOTV.apk" 2>/dev/null || true)
+  cp -f BOOTV.apk "$DOWNLOAD_DIR/BOOTV.apk" 2>/dev/null || true
   echo "=== Deployed to: $DOWNLOAD_DIR/BOOTV.apk ==="
 fi
 
 if grep -q "tv.bootv.app.beta" AndroidManifest.xml; then
   cp -f BOOTV.apk BOOTV_beta.apk
   if [ -d "$DOWNLOAD_DIR" ]; then
-    cp -f BOOTV.apk "$DOWNLOAD_DIR/BOOTV_beta.apk"
+    (rm -f "$DOWNLOAD_DIR/BOOTV_beta.apk" 2>/dev/null || true)
+    cp -f BOOTV.apk "$DOWNLOAD_DIR/BOOTV_beta.apk" 2>/dev/null || true
     echo "=== Deployed to: $DOWNLOAD_DIR/BOOTV_beta.apk ==="
   fi
 fi

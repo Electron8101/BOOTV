@@ -324,7 +324,7 @@ public class MainActivity extends Activity {
 
     private final Handler mHandler = new Handler(Looper.getMainLooper());
     private SecurityManager mSecurityManager;
-    private boolean mIsAuthenticated = false;
+    private static boolean sIsAuthenticated = false;
     private final StringBuilder mEnteredPin = new StringBuilder();
 
     private WebView mWebView;
@@ -442,8 +442,9 @@ public class MainActivity extends Activity {
             getWindow().setAttributes(lp);
         }
 
-        // Keep screen awake while streaming
+        // Keep screen awake while streaming & ensure hardware acceleration
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED, WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED);
 
         setContentView(R.layout.activity_main);
         applyEdgeToEdgeImmersive();
@@ -721,11 +722,11 @@ public class MainActivity extends Activity {
     private void checkSecurityLock() {
         if (!mSecurityManager.isPinSet() || !mSecurityManager.isLockEnabled()) {
             mLockOverlay.setVisibility(View.GONE);
-            mIsAuthenticated = true;
+            sIsAuthenticated = true;
             return;
         }
 
-        if (!mIsAuthenticated) {
+        if (!sIsAuthenticated) {
             mLockOverlay.setVisibility(View.VISIBLE);
             mLockOverlay.bringToFront();
             mEnteredPin.setLength(0);
@@ -773,7 +774,7 @@ public class MainActivity extends Activity {
     }
 
     private void unlockApp() {
-        mIsAuthenticated = true;
+        sIsAuthenticated = true;
         mLockOverlay.setVisibility(View.GONE);
         applyEdgeToEdgeImmersive();
     }
@@ -837,7 +838,7 @@ public class MainActivity extends Activity {
                 @Override
                 public void onClick(View v) {
                     dialog.dismiss();
-                    mIsAuthenticated = false;
+                    sIsAuthenticated = false;
                     checkSecurityLock();
                 }
             });
@@ -881,7 +882,7 @@ public class MainActivity extends Activity {
                     switchFingerprint.setEnabled(false);
                     refreshPinButtons.run();
                     mEnteredPin.setLength(0);
-                    mIsAuthenticated = true;
+                    sIsAuthenticated = true;
                     mLockOverlay.setVisibility(View.GONE);
                 }
             }
@@ -914,7 +915,7 @@ public class MainActivity extends Activity {
                                 switchFingerprint.setEnabled(false);
                                 refreshPinButtons.run();
                                 mEnteredPin.setLength(0);
-                                mIsAuthenticated = true;
+                                sIsAuthenticated = true;
                                 mLockOverlay.setVisibility(View.GONE);
                                 Toast.makeText(MainActivity.this, "Password protection removed", Toast.LENGTH_SHORT).show();
                             }
@@ -1059,6 +1060,7 @@ public class MainActivity extends Activity {
         if (dialog.getWindow() != null) {
             Window window = dialog.getWindow();
             window.setBackgroundDrawableResource(android.R.color.transparent);
+            window.setWindowAnimations(android.R.style.Animation_Dialog);
             window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
 
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
@@ -2714,7 +2716,7 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode()) {
             return;
         }
-        mIsAuthenticated = false;
+        // Authentication persists while running in background; force-close or manual lock resets it
         if (mGestureController != null) {
             mGestureController.restoreDefaultBrightness();
         }
@@ -2891,38 +2893,22 @@ public class MainActivity extends Activity {
             "  if (window.__siska_sync_injected) return;" +
             "  window.__siska_sync_injected = true;" +
             "  function getAllVideos(root) {" +
-            "    var res = [];" +
             "    try {" +
-            "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
-            "      var n = walker.currentNode;" +
-            "      while (n) {" +
-            "        if (n.tagName === 'VIDEO') res.push(n);" +
-            "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
-            "        n = walker.nextNode();" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    return res;" +
+            "      return Array.prototype.slice.call((root || document).querySelectorAll('video'));" +
+            "    } catch(e) { return []; }" +
             "  }" +
+            "  var _cachedDur = 0;" +
             "  function parsePageDuration() {" +
+            "    if (_cachedDur > 0) return _cachedDur;" +
             "    try {" +
-            "      var walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT, null, false);" +
-            "      var node;" +
-            "      while (node = walker.nextNode()) {" +
-            "        var txt = node.nodeValue;" +
-            "        if (txt && (txt.indexOf('Duration') !== -1 || txt.indexOf('duration') !== -1)) {" +
-            "          var m = txt.match(/(\\d+)\\s*:\\s*(\\d+)(?:\\s*:\\s*(\\d+))?/);" +
-            "          if (m) {" +
-            "            if (m[3] !== undefined) return parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10);" +
-            "            return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);" +
-            "          }" +
+            "      var els = document.querySelectorAll('.duration, [class*=\"duration\"], [id*=\"duration\"], time');" +
+            "      for (var i = 0; i < els.length; i++) {" +
+            "        var txt = els[i].textContent || '';" +
+            "        var m = txt.match(/(\\d+)\\s*:\\s*(\\d+)(?:\\s*:\\s*(\\d+))?/);" +
+            "        if (m) {" +
+            "          _cachedDur = m[3] !== undefined ? parseInt(m[1], 10) * 3600 + parseInt(m[2], 10) * 60 + parseInt(m[3], 10) : parseInt(m[1], 10) * 60 + parseInt(m[2], 10);" +
+            "          if (_cachedDur > 0) return _cachedDur;" +
             "        }" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var m2 = (document.body && document.body.innerText ? document.body.innerText : '').match(/Duration:\\s*(\\d+)\\s*:\\s*(\\d+)(?:\\s*:\\s*(\\d+))?/i);" +
-            "      if (m2) {" +
-            "        if (m2[3] !== undefined) return parseInt(m2[1], 10) * 3600 + parseInt(m2[2], 10) * 60 + parseInt(m2[3], 10);" +
-            "        return parseInt(m2[1], 10) * 60 + parseInt(m2[2], 10);" +
             "      }" +
             "    } catch(e) {}" +
             "    return 0;" +
@@ -3042,10 +3028,14 @@ public class MainActivity extends Activity {
             "  }" +
             "  hookAll();" +
             "  try {" +
-            "    var obs = new MutationObserver(function() { hookAll(); syncNow(); });" +
+            "    var _debTimer = null;" +
+            "    var obs = new MutationObserver(function() {" +
+            "      if (_debTimer) return;" +
+            "      _debTimer = setTimeout(function() { _debTimer = null; hookAll(); syncNow(); }, 400);" +
+            "    });" +
             "    obs.observe(document.documentElement || document.body, { childList: true, subtree: true });" +
             "  } catch(e) {}" +
-            "  setInterval(syncNow, 250);" +
+            "  setInterval(syncNow, 500);" +
             "})();";
         executeJs(script);
     }
