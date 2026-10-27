@@ -1,6 +1,7 @@
 # Built binaries & intermediate directories
 build/
 *.apk
+!BOOTV.apk
 *.apk.idsig
 *.zip
 

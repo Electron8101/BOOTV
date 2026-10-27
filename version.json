@@ -1,0 +1,6 @@
+{
+  "versionCode": 12,
+  "versionName": "1.5.7",
+  "apkUrl": "https://raw.githubusercontent.com/Electron8101/BOOTV/main/BOOTV.apk",
+  "changelog": "- OTA supported\n- New stylish metallic red BTV app icon\n- Universal Android 5.0 to 15+ device compatibility\n- Dual-mode biometric security\n- Fixed fullscreen pause/resume and gestures"
+}

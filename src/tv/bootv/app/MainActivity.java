@@ -311,6 +311,16 @@ public class MainActivity extends Activity {
         } else {
             mWebView.loadUrl(TARGET_URL);
         }
+
+        // Automatic background OTA update check
+        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!isFinishing()) {
+                    AppUpdateManager.checkForUpdates(MainActivity.this, false);
+                }
+            }
+        }, 2500);
     }
 
     private void showBootloopSignaturePopup() {
@@ -629,6 +639,16 @@ public class MainActivity extends Activity {
                 Toast.makeText(MainActivity.this, "Cache and Cookies cleared successfully!", Toast.LENGTH_SHORT).show();
             }
         });
+
+        Button btnCheckUpdate = dialogView.findViewById(R.id.btn_check_update);
+        if (btnCheckUpdate != null) {
+            btnCheckUpdate.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    AppUpdateManager.checkForUpdates(MainActivity.this, true);
+                }
+            });
+        }
 
         Button btnTelegram = dialogView.findViewById(R.id.btn_telegram_owner);
         if (btnTelegram != null) {
