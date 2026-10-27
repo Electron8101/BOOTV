@@ -1,8 +1,8 @@
 {
-  "versionCode": 17,
-  "versionName": "2.2",
-  "minRequiredVersion": 17,
+  "versionCode": 18,
+  "versionName": "2.3",
+  "minRequiredVersion": 18,
   "forceUpdate": true,
   "apkUrl": "https://raw.githubusercontent.com/Electron8101/BOOTV/main/BOOTV.apk",
-  "changelog": "🚨 EMERGENCY FIX (v2.2) 🚨\n- Fixed crash on launch (MainActivity constructor instantiation)\n- Anti-tamper security & string encryption active\n- Optimized stability & smooth playback"
+  "changelog": "-more optimisation\n- Fast-path streaming engine\n- Low-latency SafeBrowsing & JS timer pause\n- Multi-layer security & encrypted endpoints"
 }

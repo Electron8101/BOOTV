@@ -399,7 +399,7 @@ public class AppUpdateManager {
 
                     output = new FileOutputStream(apkFile);
 
-                    byte[] data = new byte[8192];
+                    byte[] data = new byte[32768];
                     long total = 0;
                     int count;
                     int lastReportedPercent = -1;

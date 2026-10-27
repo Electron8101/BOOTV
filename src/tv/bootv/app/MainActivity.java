@@ -1083,7 +1083,8 @@ public class MainActivity extends Activity {
     }
 
     private boolean isAdOrTracker(String url) {
-        if (url == null) return false;
+        if (url == null || url.isEmpty()) return false;
+        if (url.contains(MAIN_DOMAIN)) return false;
         String lower = url.toLowerCase();
         for (String keyword : AD_HOST_KEYWORDS) {
             if (lower.contains(keyword)) {
@@ -1175,6 +1176,13 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+
+        // Performance & latency optimizations
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            settings.setSafeBrowsingEnabled(false);
+        }
+        settings.setGeolocationEnabled(false);
+        settings.setSaveFormData(false);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
@@ -1470,6 +1478,7 @@ public class MainActivity extends Activity {
         }
         if (mWebView != null) {
             mWebView.onPause();
+            mWebView.pauseTimers();
         }
     }
 
@@ -1483,6 +1492,7 @@ public class MainActivity extends Activity {
         checkSecurityLock();
         if (mWebView != null) {
             mWebView.onResume();
+            mWebView.resumeTimers();
         }
         AppUpdateManager.startPeriodicUpdateChecker(this);
     }
@@ -1503,8 +1513,11 @@ public class MainActivity extends Activity {
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
-        if (level >= TRIM_MEMORY_RUNNING_LOW && mWebView != null) {
+        if (mWebView != null) {
             mWebView.freeMemory();
+        }
+        if (level >= TRIM_MEMORY_MODERATE) {
+            System.gc();
         }
     }
 
