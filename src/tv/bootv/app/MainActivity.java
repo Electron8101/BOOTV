@@ -49,6 +49,10 @@ import java.net.URL;
 
 public class MainActivity extends Activity {
 
+    public MainActivity() {
+        super();
+    }
+
     private static final String TARGET_URL = AppGuard.getTargetUrl();
     private static final String MAIN_DOMAIN = AppGuard.getMainDomain();
 
