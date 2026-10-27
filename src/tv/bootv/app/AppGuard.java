@@ -109,7 +109,7 @@ public final class AppGuard {
 
         // 1. Anti-Clone Package Name Validation
         String currentPkg = activity.getPackageName();
-        if (!getExpectedPackage().equals(currentPkg)) {
+        if (!getExpectedPackage().equals(currentPkg) && !"tv.bootv.app.beta".equals(currentPkg)) {
             triggerTamperAlert(activity, "App cloning or package renaming detected.");
             return false;
         }

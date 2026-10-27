@@ -32,6 +32,7 @@ aapt2 link build/resources.zip \
   -I "$ANDROID_JAR" \
   --manifest AndroidManifest.xml \
   --java build/gen \
+  --custom-package tv.bootv.app \
   -o build/unaligned.apk \
   --auto-add-overlay
 
@@ -85,6 +86,14 @@ DOWNLOAD_DIR="/storage/emulated/0/Download"
 if [ -d "$DOWNLOAD_DIR" ]; then
   cp -f BOOTV.apk "$DOWNLOAD_DIR/BOOTV.apk"
   echo "=== Deployed to: $DOWNLOAD_DIR/BOOTV.apk ==="
+fi
+
+if grep -q "tv.bootv.app.beta" AndroidManifest.xml; then
+  cp -f BOOTV.apk BOOTV_beta.apk
+  if [ -d "$DOWNLOAD_DIR" ]; then
+    cp -f BOOTV.apk "$DOWNLOAD_DIR/BOOTV_beta.apk"
+    echo "=== Deployed to: $DOWNLOAD_DIR/BOOTV_beta.apk ==="
+  fi
 fi
 
 echo "=== APK Built Successfully: $WORKSPACE_DIR/BOOTV.apk ==="

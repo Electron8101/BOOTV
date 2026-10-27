@@ -6,6 +6,14 @@
     <color name="white">#FFFFFFFF</color>
     <color name="gray">#FF888888</color>
     <color name="translucent_dark">#B3000000</color>
-    <color name="hud_bg">#CC1E1E1E</color>
+    <color name="hud_bg">#D012131A</color>
     <color name="seek_blue">#FF00A8FF</color>
+
+    <!-- Glassmorphic & Modern Beta Palette -->
+    <color name="glass_panel_bg">#D910121A</color>
+    <color name="glass_border">#35FFFFFF</color>
+    <color name="glass_btn_bg">#2EFFFFFF</color>
+    <color name="neon_cyan">#FF00F0FF</color>
+    <color name="neon_purple">#FFB026FF</color>
+    <color name="beta_orange">#FFFF6B00</color>
 </resources>

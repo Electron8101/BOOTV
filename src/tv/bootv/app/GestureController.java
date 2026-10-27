@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ProgressBar;
@@ -43,6 +44,8 @@ public class GestureController {
     private boolean mIsLocked = false;
     private int mCurrentAspectMode = 0; // 0: Fit, 1: Fill (Notch Zoom), 2: Stretch
     private float mCurrentSpeed = 1.0f;
+    private boolean mIsLongPressSpeedBoost = false;
+    private float mPreBoostSpeed = 1.0f;
 
     // Gesture tracking state
     private static final int GESTURE_NONE = 0;
@@ -57,6 +60,7 @@ public class GestureController {
     private int mCurrentSeekDelta = 0;
 
     private final GestureDetector mGestureDetector;
+    private final ScaleGestureDetector mScaleDetector;
 
     private final TextView mBtnPlayPause;
     private boolean mIsPlaying = true;
@@ -197,6 +201,17 @@ public class GestureController {
             }
 
             @Override
+            public void onLongPress(MotionEvent e) {
+                if (mIsLocked) return;
+                mIsLongPressSpeedBoost = true;
+                mPreBoostSpeed = mCurrentSpeed;
+                if (mListener != null) {
+                    mListener.onSpeedChange(2.0f);
+                }
+                showFeedback("⚡ 2x Speed (Hold)");
+            }
+
+            @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
                 if (mTopBar.getVisibility() == View.VISIBLE) {
                     mTopBar.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
@@ -216,9 +231,38 @@ public class GestureController {
             }
         });
 
+        mScaleDetector = new ScaleGestureDetector(activity, new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            @Override
+            public boolean onScale(ScaleGestureDetector detector) {
+                if (mIsLocked) return false;
+                float factor = detector.getScaleFactor();
+                if (factor > 1.12f) {
+                    if (mCurrentAspectMode != 1) {
+                        mCurrentAspectMode = 1;
+                        showFeedback("⤢ Zoom to Notch (Fill)");
+                        if (mListener != null) mListener.onAspectRatioChange(mCurrentAspectMode);
+                    }
+                    return true;
+                } else if (factor < 0.88f) {
+                    if (mCurrentAspectMode != 0) {
+                        mCurrentAspectMode = 0;
+                        showFeedback("⤢ Fit to Screen");
+                        if (mListener != null) mListener.onAspectRatioChange(mCurrentAspectMode);
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
+
         mTouchView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
+                if (event.getPointerCount() > 1) {
+                    mScaleDetector.onTouchEvent(event);
+                    return true;
+                }
+
                 float height = mTouchView.getHeight();
                 // If user touches bottom 22% (player controlbar & native seekbar), forward to video view!
                 if (height > 0 && event.getY() > height * 0.78f) {
@@ -230,6 +274,13 @@ public class GestureController {
 
                 boolean handled = mGestureDetector.onTouchEvent(event);
                 if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                    if (mIsLongPressSpeedBoost) {
+                        mIsLongPressSpeedBoost = false;
+                        if (mListener != null) {
+                            mListener.onSpeedChange(mPreBoostSpeed);
+                        }
+                        showFeedback("⚡ Speed: " + mPreBoostSpeed + "x");
+                    }
                     if (mActiveGesture == GESTURE_SEEK && mCurrentSeekDelta != 0) {
                         if (mListener != null) {
                             mListener.onSeek(mCurrentSeekDelta);

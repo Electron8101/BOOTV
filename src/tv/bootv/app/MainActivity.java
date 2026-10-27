@@ -2,10 +2,12 @@ package tv.bootv.app;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.PictureInPictureParams;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
@@ -13,6 +15,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Rational;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -237,6 +240,12 @@ public class MainActivity extends Activity {
     private TextView mBtnAspectRatio;
     private TextView mBtnSpeed;
     private TextView mBtnLock;
+    private TextView mBtnPip;
+    private TextView mBtnFullscreenExtPlayer;
+    private LinearLayout mPillExternalPlayer;
+    private TextView mTxtStreamFormatBadge;
+    private String mLastStreamUrl = null;
+    private String mLastStreamFormat = "HLS";
 
     // UI & Security Elements
     private FrameLayout mFabSettings;
@@ -294,6 +303,33 @@ public class MainActivity extends Activity {
         mBtnAspectRatio = findViewById(R.id.btn_aspect_ratio);
         mBtnSpeed = findViewById(R.id.btn_speed);
         mBtnLock = findViewById(R.id.btn_lock);
+        mBtnPip = findViewById(R.id.btn_pip);
+        mBtnFullscreenExtPlayer = findViewById(R.id.btn_fullscreen_ext_player);
+        mPillExternalPlayer = findViewById(R.id.pill_external_player);
+        mTxtStreamFormatBadge = findViewById(R.id.txt_stream_format_badge);
+
+        if (mBtnPip != null) {
+            mBtnPip.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    enterPipMode();
+                }
+            });
+        }
+
+        View.OnClickListener extPlayerClickListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                launchExternalPlayer(mLastStreamUrl, mLastStreamFormat);
+            }
+        };
+
+        if (mBtnFullscreenExtPlayer != null) {
+            mBtnFullscreenExtPlayer.setOnClickListener(extPlayerClickListener);
+        }
+        if (mPillExternalPlayer != null) {
+            mPillExternalPlayer.setOnClickListener(extPlayerClickListener);
+        }
 
         // UI & Security Elements
         mFabSettings = findViewById(R.id.fab_settings);
@@ -1253,6 +1289,7 @@ public class MainActivity extends Activity {
                     if (isAdOrTracker(url)) {
                         return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
                     }
+                    checkAndCaptureStreamUrl(url);
                     boolean isEmbedCandidate = (url.contains("/e/") || url.contains("/embed/") || url.contains("/stream/") || url.contains("/v/") || url.contains("/player/"))
                             && !url.contains(".js") && !url.contains(".css") && !url.contains(".png") && !url.contains(".jpg") && !url.contains(".m3u8") && !url.contains(".ts") && !url.contains(".mp4");
                     if (isEmbedCandidate) {
@@ -1270,6 +1307,7 @@ public class MainActivity extends Activity {
                     return new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
                 }
                 if (url != null) {
+                    checkAndCaptureStreamUrl(url);
                     boolean isEmbedCandidate = (url.contains("/e/") || url.contains("/embed/") || url.contains("/stream/") || url.contains("/v/") || url.contains("/player/"))
                             && !url.contains(".js") && !url.contains(".css") && !url.contains(".png") && !url.contains(".jpg") && !url.contains(".m3u8") && !url.contains(".ts") && !url.contains(".mp4");
                     if (isEmbedCandidate) {
@@ -1357,6 +1395,14 @@ public class MainActivity extends Activity {
                         ViewGroup.LayoutParams.MATCH_PARENT
                 ));
 
+                if (mPillExternalPlayer != null) {
+                    mPillExternalPlayer.setVisibility(View.GONE);
+                }
+                if (mBtnFullscreenExtPlayer != null && mLastStreamUrl != null) {
+                    mBtnFullscreenExtPlayer.setVisibility(View.VISIBLE);
+                    mBtnFullscreenExtPlayer.setText("📺 " + mLastStreamFormat);
+                }
+
                 applyEdgeToEdgeImmersive();
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
@@ -1380,6 +1426,10 @@ public class MainActivity extends Activity {
         mFullscreenContainer.setVisibility(View.GONE);
         mFabSettings.setVisibility(View.VISIBLE); // Restore FAB
         mWebView.setVisibility(View.VISIBLE);
+
+        if (mLastStreamUrl != null && mPillExternalPlayer != null) {
+            mPillExternalPlayer.setVisibility(View.VISIBLE);
+        }
 
         // Reset brightness to system default when exiting fullscreen!
         if (mGestureController != null) {
@@ -1469,9 +1519,130 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void checkAndCaptureStreamUrl(String url) {
+        if (url == null || url.isEmpty()) return;
+        String lower = url.toLowerCase();
+        String format = null;
+        if (lower.contains(".m3u8")) {
+            format = "HLS";
+        } else if (lower.contains(".mpd")) {
+            format = "DASH";
+        } else if (lower.contains(".mp4")) {
+            format = "MP4";
+        } else if (lower.contains(".webm")) {
+            format = "WEBM";
+        } else if (lower.contains(".mkv")) {
+            format = "MKV";
+        }
+
+        if (format != null && !isAdOrTracker(url)) {
+            final String finalUrl = url;
+            final String finalFormat = format;
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mLastStreamUrl = finalUrl;
+                    mLastStreamFormat = finalFormat;
+                    if (mTxtStreamFormatBadge != null) {
+                        mTxtStreamFormatBadge.setText(finalFormat);
+                    }
+                    if (mPillExternalPlayer != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
+                        mPillExternalPlayer.setVisibility(View.VISIBLE);
+                    }
+                    if (mBtnFullscreenExtPlayer != null) {
+                        mBtnFullscreenExtPlayer.setVisibility(View.VISIBLE);
+                        mBtnFullscreenExtPlayer.setText("📺 " + finalFormat);
+                    }
+                }
+            });
+        }
+    }
+
+    private void launchExternalPlayer(String url, String format) {
+        if (url == null || url.isEmpty()) {
+            Toast.makeText(this, "No video stream captured yet. Play a video first!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            Uri uri = Uri.parse(url);
+            String mimeType = "video/*";
+            if (url.contains(".m3u8")) mimeType = "application/x-mpegURL";
+            else if (url.contains(".mpd")) mimeType = "application/dash+xml";
+            else if (url.contains(".mp4")) mimeType = "video/mp4";
+            else if (url.contains(".webm")) mimeType = "video/webm";
+            else if (url.contains(".mkv")) mimeType = "video/x-matroska";
+
+            intent.setDataAndType(uri, mimeType);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            Bundle headers = new Bundle();
+            headers.putString("User-Agent", mUserAgentString);
+            headers.putString("Referer", TARGET_URL);
+            intent.putExtra("android.media.intent.extra.HTTP_HEADERS", headers);
+
+            startActivity(Intent.createChooser(intent, "Play " + format + " in External Player"));
+        } catch (Exception e) {
+            Toast.makeText(this, "No external video player found. Install VLC, MX Player, or Just Player.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    public void enterPipMode() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                PictureInPictureParams.Builder builder = new PictureInPictureParams.Builder();
+                builder.setAspectRatio(new Rational(16, 9));
+                enterPictureInPictureMode(builder.build());
+            } catch (Exception e) {
+                try {
+                    enterPictureInPictureMode();
+                } catch (Exception ignored) {}
+            }
+        } else {
+            Toast.makeText(this, "Picture-in-Picture requires Android 8.0+", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (mFullscreenContainer != null && mFullscreenContainer.getVisibility() == View.VISIBLE) {
+                enterPipMode();
+            } else if (mLastStreamUrl != null) {
+                enterPipMode();
+            }
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean isInPictureInPictureMode, Configuration newConfig) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig);
+        if (isInPictureInPictureMode) {
+            if (mPlayerTopBar != null) mPlayerTopBar.setVisibility(View.GONE);
+            if (mFabSettings != null) mFabSettings.setVisibility(View.GONE);
+            if (mPillExternalPlayer != null) mPillExternalPlayer.setVisibility(View.GONE);
+            if (mPopupBootloop != null) mPopupBootloop.setVisibility(View.GONE);
+            if (mLockOverlay != null) mLockOverlay.setVisibility(View.GONE);
+            if (mGestureTouchView != null) mGestureTouchView.setVisibility(View.GONE);
+        } else {
+            if (mFabSettings != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
+                mFabSettings.setVisibility(View.VISIBLE);
+            }
+            if (mLastStreamUrl != null && mPillExternalPlayer != null && (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE)) {
+                mPillExternalPlayer.setVisibility(View.VISIBLE);
+            }
+            if (mGestureTouchView != null) mGestureTouchView.setVisibility(View.VISIBLE);
+            applyEdgeToEdgeImmersive();
+        }
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode()) {
+            return;
+        }
         mIsAuthenticated = false;
         if (mGestureController != null) {
             mGestureController.restoreDefaultBrightness();

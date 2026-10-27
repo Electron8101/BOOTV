@@ -19,7 +19,8 @@ public class AppFileProvider extends ContentProvider {
     public static final String AUTHORITY = "tv.bootv.app.fileprovider";
 
     public static Uri getUriForFile(Context context, File file) {
-        return Uri.parse("content://" + AUTHORITY + "/" + file.getName());
+        String authority = (context != null ? context.getPackageName() : "tv.bootv.app.beta") + ".fileprovider";
+        return Uri.parse("content://" + authority + "/" + file.getName());
     }
 
     @Override

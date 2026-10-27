@@ -95,10 +95,47 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="BOOTV v1.5.3"
-            android:textColor="@color/gray"
+            android:text="BOOTV Beta v2.4"
+            android:textColor="@color/neon_cyan"
             android:textSize="10sp"
+            android:textStyle="bold"
             android:layout_marginTop="2dp" />
+    </LinearLayout>
+
+    <!-- Modern Floating Glassmorphic External Player Pill -->
+    <LinearLayout
+        android:id="@+id/pill_external_player"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/btn_external_player"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📺 Play in External Player"
+            android:textColor="@color/neon_cyan"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/txt_stream_format_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="HLS"
+            android:textColor="@color/white"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:background="@drawable/badge_beta"
+            android:layout_marginLeft="8dp" />
     </LinearLayout>
 
     <!-- Fullscreen Video Container with Notch & Gesture Support -->
@@ -229,7 +266,36 @@
                 android:gravity="center"
                 android:background="@drawable/btn_pill"
                 android:paddingLeft="12dp"
-                android:paddingRight="12dp" />
+                android:paddingRight="12dp"
+                android:layout_marginRight="6dp" />
+
+            <TextView
+                android:id="@+id/btn_pip"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="❐ PiP"
+                android:textColor="@color/white"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/glass_button"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:layout_marginRight="6dp" />
+
+            <TextView
+                android:id="@+id/btn_fullscreen_ext_player"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="📺 Player"
+                android:textColor="@color/neon_cyan"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/btn_external_player"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:visibility="gone" />
         </LinearLayout>
 
         <!-- Brightness Gesture HUD (Left) -->
