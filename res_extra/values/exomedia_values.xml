@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="exomedia_controls_button_disabled">#FF757575</color>
+    <color name="exomedia_controls_button_focused_background">#5fffffff</color>
+    <color name="exomedia_controls_button_normal">#FFFFFFFF</color>
+    <color name="exomedia_controls_button_pressed">#FFE0E0E0</color>
+    <string name="exomedia_controls_accessibility_next">Next Media</string>
+    <string name="exomedia_controls_accessibility_play_pause">Play or Pause</string>
+    <string name="exomedia_controls_accessibility_previous">Previous Media</string>
+    <string name="exomedia_controls_live">Live</string>
+    <declare-styleable name="VideoView">
+    <attr format="boolean" name="useTextureViewBacking"/>
+    <attr format="boolean" name="measureBasedOnAspectRatio"/>
+    <attr format="string" name="playerConfigProvider"/>
+    <attr format="string" name="videoControlsProvider"/>
+
+    <attr format="enum" name="videoScale">
+      <enum name="center" value="0"/>
+      <enum name="centerCrop" value="1"/>
+      <enum name="centerInside" value="2"/>
+      <enum name="fitCenter" value="3"/>
+      <enum name="fitXY" value="4"/>
+      <enum name="none" value="5"/>
+    </attr>
+  </declare-styleable>
+</resources>

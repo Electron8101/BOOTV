@@ -23,6 +23,12 @@ import android.os.Message;
 import android.util.Rational;
 import android.webkit.JavascriptInterface;
 import android.widget.SeekBar;
+import com.devbrackets.android.exomedia.ui.widget.VideoView;
+import com.devbrackets.android.exomedia.listener.OnPreparedListener;
+import com.devbrackets.android.exomedia.listener.OnCompletionListener;
+import com.devbrackets.android.exomedia.listener.OnErrorListener;
+import com.devbrackets.android.exomedia.listener.OnBufferUpdateListener;
+import com.devbrackets.android.exomedia.core.video.scale.ScaleType;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -306,7 +312,7 @@ public class MainActivity extends Activity {
 
     private WebView mWebView;
     private FrameLayout mFullscreenContainer;
-    private FrameLayout mVideoSurfaceHolder;
+    private VideoView mExoVideoView;
     private View mCustomView;
     private WebChromeClient.CustomViewCallback mCustomViewCallback;
 
@@ -405,7 +411,7 @@ public class MainActivity extends Activity {
 
         mWebView = findViewById(R.id.webview);
         mFullscreenContainer = findViewById(R.id.fullscreen_container);
-        mVideoSurfaceHolder = findViewById(R.id.video_surface_holder);
+        setupExoMedia();
         mProgressBar = findViewById(R.id.progressBar);
         mErrorLayout = findViewById(R.id.error_layout);
         mBtnRetry = findViewById(R.id.btn_retry);
@@ -486,20 +492,19 @@ public class MainActivity extends Activity {
                     if (mGestureController != null) {
                         mGestureController.cancelAutoHideControls();
                     }
-                    if (mVideoDuration <= 0) {
-                        probeVideoDuration();
-                    }
                 }
 
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     mIsUserSeeking = false;
                     double ratio = seekBar.getProgress() / 1000.0;
-                    if (mVideoDuration > 0) {
-                        double targetSec = ratio * mVideoDuration;
-                        seekVideoTo(targetSec);
+                    if (mExoVideoView != null) {
+                        long durMs = mExoVideoView.getDuration();
+                        if (durMs > 0) {
+                            long targetMs = (long) (ratio * durMs);
+                            mExoVideoView.seekTo(targetMs);
+                        }
                     }
-                    seekVideoRatio(ratio);
                     if (mGestureController != null) {
                         mGestureController.scheduleAutoHideControls();
                     }
@@ -511,7 +516,11 @@ public class MainActivity extends Activity {
             mBtnDockPlayFullscreen.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    triggerFullscreenVideo();
+                    if (mLastStreamUrl != null && !mLastStreamUrl.isEmpty()) {
+                        playVideoWithExoMedia(mLastStreamUrl);
+                    } else {
+                        triggerFullscreenVideo();
+                    }
                 }
             });
         }
@@ -1206,23 +1215,132 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void setupExoMedia() {
+        mExoVideoView = findViewById(R.id.exomedia_video_view);
+        if (mExoVideoView == null) return;
+
+        mExoVideoView.setVideoControls(null);
+
+        mExoVideoView.setOnPreparedListener(new OnPreparedListener() {
+            @Override
+            public void onPrepared() {
+                long durMs = mExoVideoView.getDuration();
+                if (durMs > 0) {
+                    mVideoDuration = durMs / 1000.0;
+                    if (mTxtTimeTotal != null) {
+                        mTxtTimeTotal.setText(formatTime((long) mVideoDuration));
+                    }
+                }
+                mExoVideoView.start();
+                if (mBtnPlayPause != null) {
+                    mBtnPlayPause.setText("⏸");
+                }
+                startExoProgressTracker();
+            }
+        });
+
+        mExoVideoView.setOnBufferUpdateListener(new OnBufferUpdateListener() {
+            @Override
+            public void onBufferingUpdate(int percent) {
+                if (mPlayerSeekBar != null) {
+                    mPlayerSeekBar.setSecondaryProgress(percent * 10);
+                }
+            }
+        });
+
+        mExoVideoView.setOnCompletionListener(new OnCompletionListener() {
+            @Override
+            public void onCompletion() {
+                if (mBtnPlayPause != null) {
+                    mBtnPlayPause.setText("▶");
+                }
+                stopExoProgressTracker();
+            }
+        });
+
+        mExoVideoView.setOnErrorListener(new OnErrorListener() {
+            @Override
+            public boolean onError(Exception e) {
+                Toast.makeText(MainActivity.this, "Stream error, opening in external player...", Toast.LENGTH_SHORT).show();
+                launchExternalPlayer(mLastStreamUrl, mLastStreamFormat);
+                return true;
+            }
+        });
+    }
+
+    private final Runnable mExoProgressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mExoVideoView != null && mExoVideoView.isPlaying()) {
+                long curMs = mExoVideoView.getCurrentPosition();
+                long durMs = mExoVideoView.getDuration();
+                if (durMs > 0 && !mIsUserSeeking) {
+                    long curSec = curMs / 1000;
+                    long durSec = durMs / 1000;
+                    mVideoDuration = durSec;
+                    if (mTxtTimeCurrent != null) {
+                        mTxtTimeCurrent.setText(formatTime(curSec));
+                    }
+                    if (mTxtTimeTotal != null) {
+                        mTxtTimeTotal.setText(formatTime(durSec));
+                    }
+                    if (mPlayerSeekBar != null) {
+                        int progress = (int) ((curMs / (double) durMs) * 1000);
+                        mPlayerSeekBar.setProgress(progress);
+                    }
+                    if (mGestureController != null) {
+                        mGestureController.updatePlaybackTime(curSec, durSec);
+                    }
+                }
+                mHandler.postDelayed(this, 300);
+            }
+        }
+    };
+
+    private void startExoProgressTracker() {
+        mHandler.removeCallbacks(mExoProgressRunnable);
+        mHandler.post(mExoProgressRunnable);
+    }
+
+    private void stopExoProgressTracker() {
+        mHandler.removeCallbacks(mExoProgressRunnable);
+    }
+
+    public void playVideoWithExoMedia(String streamUrl) {
+        if (streamUrl == null || streamUrl.isEmpty()) return;
+        mLastStreamUrl = streamUrl;
+
+        // Pause webview video so they don't both play audio
+        executeJs("try { document.querySelectorAll('video').forEach(function(v){ v.pause(); }); } catch(e){}");
+
+        mWebView.setVisibility(View.INVISIBLE);
+        mFabSettings.setVisibility(View.GONE);
+        if (mDockVideoSniffer != null) mDockVideoSniffer.setVisibility(View.GONE);
+        if (mPillExternalPlayer != null) mPillExternalPlayer.setVisibility(View.GONE);
+
+        mFullscreenContainer.setVisibility(View.VISIBLE);
+        if (mPlayerTopBar != null) mPlayerTopBar.setVisibility(View.VISIBLE);
+        if (mPlayerBottomBar != null) mPlayerBottomBar.setVisibility(View.VISIBLE);
+
+        applyEdgeToEdgeImmersive();
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
+        mGestureController.setCustomView(mExoVideoView);
+        mGestureController.reset();
+        mGestureController.scheduleAutoHideControls();
+
+        mExoVideoView.stop();
+        mExoVideoView.setMedia(Uri.parse(streamUrl));
+    }
+
     private void applyAspectRatio(int mode) {
-        if (mVideoSurfaceHolder == null) return;
+        if (mExoVideoView == null) return;
         if (mode == 1) {
-            // Fill / Zoom to Notch: scale to cover full width/height
-            mVideoSurfaceHolder.setScaleX(1.18f);
-            mVideoSurfaceHolder.setScaleY(1.18f);
-            executeJs("try { document.querySelectorAll('video').forEach(function(v){ v.style.objectFit='cover'; }); } catch(e){}");
+            mExoVideoView.setScaleType(ScaleType.CENTER_CROP);
         } else if (mode == 2) {
-            // Stretch mode
-            mVideoSurfaceHolder.setScaleX(1.10f);
-            mVideoSurfaceHolder.setScaleY(1.0f);
-            executeJs("try { document.querySelectorAll('video').forEach(function(v){ v.style.objectFit='fill'; }); } catch(e){}");
+            mExoVideoView.setScaleType(ScaleType.FIT_XY);
         } else {
-            // Default Fit mode
-            mVideoSurfaceHolder.setScaleX(1.0f);
-            mVideoSurfaceHolder.setScaleY(1.0f);
-            executeJs("try { document.querySelectorAll('video').forEach(function(v){ v.style.objectFit='contain'; }); } catch(e){}");
+            mExoVideoView.setScaleType(ScaleType.FIT_CENTER);
         }
     }
 
@@ -1233,143 +1351,34 @@ public class MainActivity extends Activity {
     }
 
     private void executeVideoSeek(int secondsDelta) {
-        String script =
-            "(function(delta) {" +
-            "  function seek(win) {" +
-            "    if (!win) return;" +
-            "    try {" +
-            "      if (win.jwplayer) {" +
-            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
-            "        if (p && typeof p.seek === 'function' && typeof p.getPosition === 'function') {" +
-            "          var cur = p.getPosition() || 0;" +
-            "          var dur = (typeof p.getDuration === 'function' ? p.getDuration() : 999999) || 999999;" +
-            "          p.seek(Math.max(0, Math.min(dur, cur + delta)));" +
-            "        }" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
-            "      for (var i = 0; i < vs.length; i++) {" +
-            "        var v = vs[i];" +
-            "        var target = Math.max(0, v.currentTime + delta);" +
-            "        if (v.duration) target = Math.min(v.duration, target);" +
-            "        v.currentTime = target;" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      win.postMessage({ type: 'SISKA_VIDEO_SEEK', delta: delta }, '*');" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) {" +
-            "        seek(win.frames[j]);" +
-            "      }" +
-            "    } catch(e) {}" +
-            "  }" +
-            "  seek(window);" +
-            "})(" + secondsDelta + ");";
-        executeJs(script);
-
-        // Also dispatch keyboard arrow keys directly to active video custom view
-        if (mCustomView != null) {
-            int keyCode = secondsDelta > 0 ? KeyEvent.KEYCODE_DPAD_RIGHT : KeyEvent.KEYCODE_DPAD_LEFT;
-            int repeat = Math.max(1, Math.min(6, Math.abs(secondsDelta) / 5));
-            for (int i = 0; i < repeat; i++) {
-                mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
-                mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
-            }
+        if (mExoVideoView != null) {
+            long cur = mExoVideoView.getCurrentPosition();
+            long dur = mExoVideoView.getDuration();
+            long target = Math.max(0, cur + (secondsDelta * 1000L));
+            if (dur > 0) target = Math.min(dur, target);
+            mExoVideoView.seekTo(target);
         }
     }
 
     private void executeVideoPlaybackState(boolean shouldPlay) {
-        String script =
-            "(function(shouldPlay) {" +
-            "  function applyState(win) {" +
-            "    if (!win) return;" +
-            "    try {" +
-            "      if (win.jwplayer) {" +
-            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
-            "        if (p) {" +
-            "          if (shouldPlay) {" +
-            "            if (typeof p.play === 'function') p.play(true);" +
-            "          } else {" +
-            "            if (typeof p.pause === 'function') p.pause(true);" +
-            "            else if (typeof p.play === 'function') p.play(false);" +
-            "          }" +
-            "        }" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      if (win.videojs && typeof win.videojs.getAllPlayers === 'function') {" +
-            "        var vjsList = win.videojs.getAllPlayers();" +
-            "        for (var k = 0; k < vjsList.length; k++) {" +
-            "          var pl = vjsList[k];" +
-            "          if (pl) {" +
-            "            if (shouldPlay) { if (typeof pl.play === 'function') pl.play(); }" +
-            "            else { if (typeof pl.pause === 'function') pl.pause(); }" +
-            "          }" +
-            "        }" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
-            "      for (var i = 0; i < vs.length; i++) {" +
-            "        var v = vs[i];" +
-            "        if (shouldPlay) { var pr = v.play(); if (pr !== undefined) pr.catch(function(e){}); }" +
-            "        else { v.pause(); }" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      win.postMessage({ type: 'SISKA_VIDEO_SET_PLAY', play: shouldPlay }, '*');" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) {" +
-            "        applyState(win.frames[j]);" +
-            "      }" +
-            "    } catch(e) {}" +
-            "  }" +
-            "  applyState(window);" +
-            "})(" + shouldPlay + ");";
-        executeJs(script);
-
-        int targetKey = shouldPlay ? KeyEvent.KEYCODE_MEDIA_PLAY : KeyEvent.KEYCODE_MEDIA_PAUSE;
-        if (mCustomView != null) {
-            mCustomView.requestFocus();
-            mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, targetKey));
-            mCustomView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, targetKey));
-        }
-        if (mWebView != null) {
-            mWebView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, targetKey));
-            mWebView.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, targetKey));
+        if (mExoVideoView != null) {
+            if (shouldPlay) {
+                mExoVideoView.start();
+                startExoProgressTracker();
+            } else {
+                mExoVideoView.pause();
+                stopExoProgressTracker();
+            }
+            if (mBtnPlayPause != null) {
+                mBtnPlayPause.setText(shouldPlay ? "⏸" : "▶");
+            }
         }
     }
 
     private void executeVideoSpeed(float speed) {
-        String script =
-            "(function(s) {" +
-            "  function speed(win) {" +
-            "    if (!win) return;" +
-            "    try {" +
-            "      if (win.jwplayer) {" +
-            "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
-            "        if (p && typeof p.setPlaybackRate === 'function') p.setPlaybackRate(s);" +
-            "      }" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
-            "      for (var i = 0; i < vs.length; i++) vs[i].playbackRate = s;" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      win.postMessage({ type: 'SISKA_VIDEO_SPEED', speed: s }, '*');" +
-            "    } catch(e) {}" +
-            "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) {" +
-            "        speed(win.frames[j]);" +
-            "      }" +
-            "    } catch(e) {}" +
-            "  }" +
-            "  speed(window);" +
-            "})(" + speed + ");";
-        executeJs(script);
+        if (mExoVideoView != null) {
+            mExoVideoView.setPlaybackSpeed(speed);
+        }
     }
 
     private boolean isAdOrTracker(String url) {
@@ -1646,16 +1655,15 @@ public class MainActivity extends Activity {
                 mCustomViewCallback = callback;
                 mOriginalOrientation = getRequestedOrientation();
 
+                if (mLastStreamUrl != null && !mLastStreamUrl.isEmpty()) {
+                    playVideoWithExoMedia(mLastStreamUrl);
+                    return;
+                }
+
                 // Keep WebView INVISIBLE (not GONE) so Chromium preserves active JavaScript timers & events!
                 mWebView.setVisibility(View.INVISIBLE);
                 mFabSettings.setVisibility(View.GONE); // Hide FAB in fullscreen video
                 mFullscreenContainer.setVisibility(View.VISIBLE);
-
-                mVideoSurfaceHolder.removeAllViews();
-                mVideoSurfaceHolder.addView(view, new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                ));
 
                 if (mPillExternalPlayer != null) {
                     mPillExternalPlayer.setVisibility(View.GONE);
@@ -1677,13 +1685,9 @@ public class MainActivity extends Activity {
                 applyEdgeToEdgeImmersive();
                 setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
-                mGestureController.setCustomView(view);
+                mGestureController.setCustomView(mExoVideoView);
                 mGestureController.reset();
                 mGestureController.scheduleAutoHideControls();
-
-                // Start active native poller to guarantee real-time SeekBar synchronization
-                mHandler.removeCallbacks(mVideoSyncPoller);
-                mHandler.post(mVideoSyncPoller);
             }
 
             @Override
@@ -1694,14 +1698,15 @@ public class MainActivity extends Activity {
     }
 
     private void exitFullscreenVideo() {
-        if (mCustomView == null) return;
+        if (mFullscreenContainer == null || mFullscreenContainer.getVisibility() != View.VISIBLE) return;
 
-        mHandler.removeCallbacks(mVideoSyncPoller);
+        stopExoProgressTracker();
         mIsUserSeeking = false;
 
-        mVideoSurfaceHolder.removeAllViews();
-        mVideoSurfaceHolder.setScaleX(1.0f);
-        mVideoSurfaceHolder.setScaleY(1.0f);
+        if (mExoVideoView != null) {
+            mExoVideoView.stop();
+        }
+
         mFullscreenContainer.setVisibility(View.GONE);
         mFabSettings.setVisibility(View.VISIBLE); // Restore FAB
         mWebView.setVisibility(View.VISIBLE);
@@ -1783,6 +1788,11 @@ public class MainActivity extends Activity {
         // If locked, back button should not bypass lock
         if (mLockOverlay.getVisibility() == View.VISIBLE) {
             finish();
+            return;
+        }
+
+        if (mFullscreenContainer != null && mFullscreenContainer.getVisibility() == View.VISIBLE) {
+            exitFullscreenVideo();
             return;
         }
 
@@ -1952,6 +1962,13 @@ public class MainActivity extends Activity {
         if (mGestureController != null) {
             mGestureController.restoreDefaultBrightness();
         }
+        if (mExoVideoView != null && mExoVideoView.isPlaying()) {
+            mExoVideoView.pause();
+            stopExoProgressTracker();
+            if (mBtnPlayPause != null) {
+                mBtnPlayPause.setText("▶");
+            }
+        }
         if (mWebView != null) {
             mWebView.onPause();
             mWebView.pauseTimers();
@@ -2008,77 +2025,18 @@ public class MainActivity extends Activity {
             if (mBatteryReceiver != null) unregisterReceiver(mBatteryReceiver);
         } catch (Exception ignored) {}
         mHandler.removeCallbacks(mClockUpdateRunnable);
-        mHandler.removeCallbacks(mVideoSyncPoller);
+        stopExoProgressTracker();
         AppUpdateManager.stopPeriodicUpdateChecker();
+        if (mExoVideoView != null) {
+            mExoVideoView.release();
+            mExoVideoView = null;
+        }
         if (mWebView != null) {
             mWebView.destroy();
             mWebView = null;
         }
         super.onDestroy();
     }
-
-    private final Runnable mVideoSyncPoller = new Runnable() {
-        @Override
-        public void run() {
-            if (mWebView != null && (mCustomView != null || (mFullscreenContainer != null && mFullscreenContainer.getVisibility() == View.VISIBLE))) {
-                String script =
-                    "(function() {" +
-                    "  function probe(win) {" +
-                    "    if (!win) return null;" +
-                    "    try {" +
-                    "      if (win.jwplayer) {" +
-                    "        var p = (typeof win.jwplayer === 'function') ? win.jwplayer() : null;" +
-                    "        if (p && typeof p.getPosition === 'function') {" +
-                    "          var c = p.getPosition() || 0;" +
-                    "          var d = (typeof p.getDuration === 'function' ? p.getDuration() : 0) || 0;" +
-                    "          var st = (typeof p.getState === 'function') ? (p.getState() === 'playing') : false;" +
-                    "          if (d > 0) return { current: c, total: d, playing: st };" +
-                    "        }" +
-                    "      }" +
-                    "    } catch(e) {}" +
-                    "    try {" +
-                    "      var vs = win.document.querySelectorAll('video');" +
-                    "      for (var i = 0; i < vs.length; i++) {" +
-                    "        var v = vs[i];" +
-                    "        if (v.duration && v.duration > 0) {" +
-                    "          return { current: v.currentTime || 0, total: v.duration, playing: !v.paused };" +
-                    "        }" +
-                    "      }" +
-                    "    } catch(e) {}" +
-                    "    try {" +
-                    "      for (var j = 0; j < win.frames.length; j++) {" +
-                    "        var res = probe(win.frames[j]);" +
-                    "        if (res) return res;" +
-                    "      }" +
-                    "    } catch(e) {}" +
-                    "    return null;" +
-                    "  }" +
-                    "  var r = probe(window);" +
-                    "  if (r) return JSON.stringify(r);" +
-                    "  return '';" +
-                    "})();";
-                mWebView.evaluateJavascript(script, new ValueCallback<String>() {
-                    @Override
-                    public void onReceiveValue(String value) {
-                        if (value != null && !value.isEmpty() && !value.equals("null") && !value.equals("\"\"")) {
-                            try {
-                                String clean = value;
-                                if (clean.startsWith("\"") && clean.endsWith("\"")) {
-                                    clean = clean.substring(1, clean.length() - 1).replace("\\\"", "\"").replace("\\\\", "\\");
-                                }
-                                JSONObject obj = new JSONObject(clean);
-                                double current = obj.optDouble("current", 0);
-                                double total = obj.optDouble("total", 0);
-                                boolean playing = obj.optBoolean("playing", false);
-                                updatePlaybackProgress(current, total, playing);
-                            } catch (Exception ignored) {}
-                        }
-                    }
-                });
-            }
-            mHandler.postDelayed(this, 500);
-        }
-    };
 
     private void updatePlaybackProgress(final double currentSec, final double totalSec, final boolean isPlaying) {
         runOnUiThread(new Runnable() {
@@ -2107,43 +2065,6 @@ public class MainActivity extends Activity {
                 }
             }
         });
-    }
-
-    private void probeVideoDuration() {
-        String script =
-            "(function() {" +
-            "  try {" +
-            "    if (window.jwplayer) {" +
-            "      var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
-            "      if (p && typeof p.getDuration === 'function') return p.getDuration() || 0;" +
-            "    }" +
-            "  } catch(e) {}" +
-            "  try {" +
-            "    var vs = document.querySelectorAll('video');" +
-            "    for (var i = 0; i < vs.length; i++) {" +
-            "      if (vs[i].duration && vs[i].duration > 0) return vs[i].duration;" +
-            "    }" +
-            "  } catch(e) {}" +
-            "  return 0;" +
-            "})();";
-        if (mWebView != null) {
-            mWebView.evaluateJavascript(script, new ValueCallback<String>() {
-                @Override
-                public void onReceiveValue(String value) {
-                    if (value != null && !value.isEmpty() && !value.equals("null")) {
-                        try {
-                            double dur = Double.parseDouble(value);
-                            if (dur > 0 && !Double.isInfinite(dur) && !Double.isNaN(dur)) {
-                                mVideoDuration = dur;
-                                if (mTxtTimeTotal != null) {
-                                    mTxtTimeTotal.setText(formatTime((long) dur));
-                                }
-                            }
-                        } catch (Exception ignored) {}
-                    }
-                }
-            });
-        }
     }
 
     private String formatTime(long totalSec) {

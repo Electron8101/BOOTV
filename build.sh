@@ -26,9 +26,21 @@ else
   echo "=== [1/5] Resources up-to-date (cached) ==="
 fi
 
+if [ -d res_extra ]; then
+  if [ ! -f build/resources_extra.zip ] || [ -n "$(find res_extra -newer build/resources_extra.zip 2>/dev/null)" ]; then
+    echo "=== [1/5b] Compiling extra library resources with aapt2 ==="
+    aapt2 compile --dir res_extra -o build/resources_extra.zip
+  fi
+fi
+
 # 2. Resource linking & R.java generation
 echo "=== [2/5] Linking resources with aapt2 link ==="
-aapt2 link build/resources.zip \
+EXTRA_RES_ARG=""
+if [ -f build/resources_extra.zip ]; then
+  EXTRA_RES_ARG="build/resources_extra.zip"
+fi
+
+aapt2 link build/resources.zip $EXTRA_RES_ARG \
   -I "$ANDROID_JAR" \
   --manifest AndroidManifest.xml \
   --java build/gen \
@@ -38,25 +50,27 @@ aapt2 link build/resources.zip \
 
 # 3. Java Compilation
 echo "=== [3/5] Compiling Java code ==="
+CP="$ANDROID_JAR"
+if [ -d libs ] && [ -n "$(ls libs/*.jar 2>/dev/null)" ]; then
+  CP="$ANDROID_JAR:libs/*"
+fi
+
 javac -source 8 -target 8 -proc:none \
   -bootclasspath "$ANDROID_JAR" \
-  -cp "$ANDROID_JAR" \
+  -cp "$CP" \
   -d build/obj \
   $(find build/gen src -name "*.java")
 
-# 4. Dexing & Obfuscation with R8 (ProGuard minification)
-echo "=== [4/5] Obfuscating & Dexing bytecode with R8 ==="
-if [ -f proguard-rules.pro ] && command -v r8 >/dev/null 2>&1; then
-  r8 --release --min-api 21 \
-    --lib "$ANDROID_JAR" \
-    --pg-conf proguard-rules.pro \
-    --output build/apk \
-    $(find build/obj -name "*.class")
-else
-  d8 --min-api 21 --lib "$ANDROID_JAR" \
-    --output build/apk \
-    $(find build/obj -name "*.class")
+# 4. Dexing bytecode with d8
+echo "=== [4/5] Dexing bytecode with d8 ==="
+LIB_JARS=()
+if [ -d libs ] && [ -n "$(ls libs/*.jar 2>/dev/null)" ]; then
+  LIB_JARS=(libs/*.jar)
 fi
+
+d8 --min-api 21 --lib "$ANDROID_JAR" \
+  --output build/apk \
+  $(find build/obj -name "*.class") "${LIB_JARS[@]}"
 
 (cd build/apk && zip -u -q ../unaligned.apk classes.dex)
 
