@@ -4,5 +4,5 @@
   "minRequiredVersion": 19,
   "forceUpdate": true,
   "apkUrl": "https://raw.githubusercontent.com/Electron8101/BOOTV/main/BOOTV.apk",
-  "changelog": "-BHI UPDATE KOR\n-NEW UI\n-NEW VIDEO PLAYER INTERFACE\n-ANIME & SECTION WILL BE ADDED SOON"
+  "changelog": "-BHI UPDATE KOR\n-NEW UI\n-NEW VIDEO PLAYER INTERFACE\n-ANIME & SECTION WILL BE ADDED SOON\n-more optimisation\n- Fast-path streaming engine\n- Low-latency SafeBrowsing & JS timer pause\n- Multi-layer security & encrypted endpoints"
 }
