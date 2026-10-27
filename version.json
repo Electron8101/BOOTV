@@ -1,8 +1,8 @@
 {
-  "versionCode": 22,
-  "versionName": "2.5",
-  "minRequiredVersion": 22,
+  "versionCode": 23,
+  "versionName": "2.6",
+  "minRequiredVersion": 23,
   "forceUpdate": true,
   "apkUrl": "https://raw.githubusercontent.com/Electron8101/BOOTV/main/BOOTV.apk",
-  "changelog": "🚀 BOOTV v2.5 STABLE RELEASE 🚀\n- Background session persistence: PIN required once while running; re-verify only after force-close\n- Refined settings UI with responsive touch selectors and smooth animations\n- Ultra-fluid video playback and zero layout thrashing\n- BHI UPDATE KOR\n- NEW UI & YouTube-Style App Interface\n- NEW VIDEO PLAYER INTERFACE (Gesture seeking, volume & brightness)\n- ANIME & SECTION COMING SOON\n- Enhanced biometric & fingerprint security feedback\n- Fast-path streaming engine & auto-sniffing\n- Multi-layer security & encrypted endpoints\n- Mandatory background OTA update checker\n- Universal compatibility (Android 5.0 to 15+)"
+  "changelog": "🚀 BOOTV v2.6 OTA UPDATE 🚀\n- Downside signature popup shown immediately after entering the app\n- Background session persistence: PIN required once while running; re-verify only after force-close\n- Refined settings UI with responsive touch selectors and smooth animations\n- Ultra-fluid video playback and zero layout thrashing\n- BHI UPDATE KOR\n- NEW UI & YouTube-Style App Interface\n- NEW VIDEO PLAYER INTERFACE (Gesture seeking, volume & brightness)\n- ANIME & SECTION COMING SOON\n- Enhanced biometric & fingerprint security feedback\n- Fast-path streaming engine & auto-sniffing\n- Multi-layer security & encrypted endpoints\n- Mandatory background OTA update checker\n- Universal compatibility (Android 5.0 to 15+)"
 }

@@ -578,7 +578,6 @@ public class MainActivity extends Activity {
         setupYouTubeAppShell();
         setupWebView();
         setupSettingsAndKeypad();
-        showBootloopSignaturePopup();
 
         mBtnRetry.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -603,22 +602,36 @@ public class MainActivity extends Activity {
         handleUpdateIntent(getIntent());
     }
 
+    private boolean mHasShownPopup = false;
+
     private void showBootloopSignaturePopup() {
+        if (mHasShownPopup || mPopupBootloop == null) return;
+        mHasShownPopup = true;
+        mPopupBootloop.bringToFront();
         mPopupBootloop.setVisibility(View.VISIBLE);
         mPopupBootloop.setAlpha(0f);
-        mPopupBootloop.animate().alpha(1f).setDuration(400).start();
+        mPopupBootloop.setTranslationY(40f);
+        mPopupBootloop.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(400)
+                .start();
 
         // Auto dismiss after 3.5 seconds
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 if (mPopupBootloop != null) {
-                    mPopupBootloop.animate().alpha(0f).setDuration(500).withEndAction(new Runnable() {
-                        @Override
-                        public void run() {
-                            mPopupBootloop.setVisibility(View.GONE);
-                        }
-                    }).start();
+                    mPopupBootloop.animate()
+                            .alpha(0f)
+                            .translationY(40f)
+                            .setDuration(500)
+                            .withEndAction(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mPopupBootloop.setVisibility(View.GONE);
+                                }
+                            }).start();
                 }
             }
         }, 3500);
@@ -723,6 +736,7 @@ public class MainActivity extends Activity {
         if (!mSecurityManager.isPinSet() || !mSecurityManager.isLockEnabled()) {
             mLockOverlay.setVisibility(View.GONE);
             sIsAuthenticated = true;
+            showBootloopSignaturePopup();
             return;
         }
 
@@ -746,6 +760,7 @@ public class MainActivity extends Activity {
             }
         } else {
             mLockOverlay.setVisibility(View.GONE);
+            showBootloopSignaturePopup();
         }
     }
 
@@ -777,6 +792,7 @@ public class MainActivity extends Activity {
         sIsAuthenticated = true;
         mLockOverlay.setVisibility(View.GONE);
         applyEdgeToEdgeImmersive();
+        showBootloopSignaturePopup();
     }
 
     private void showSettingsDialog() {

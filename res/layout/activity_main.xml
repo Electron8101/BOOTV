@@ -316,12 +316,13 @@
         android:id="@+id/popup_bootloop"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_above="@+id/mini_player_container"
+        android:layout_above="@+id/yt_bottom_nav"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="18dp"
+        android:layout_marginBottom="16dp"
         android:orientation="vertical"
         android:gravity="center"
         android:background="@drawable/popup_bootloop"
+        android:elevation="24dp"
         android:visibility="gone">
 
         <TextView
