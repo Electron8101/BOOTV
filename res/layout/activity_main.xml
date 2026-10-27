@@ -102,7 +102,7 @@
             android:layout_marginTop="2dp" />
     </LinearLayout>
 
-    <!-- Soul Browser Style Floating Media Sniffer Dock -->
+    <!-- Material 3 Floating Media Sniffer Dock -->
     <LinearLayout
         android:id="@+id/dock_video_sniffer"
         android:layout_width="wrap_content"
@@ -112,8 +112,11 @@
         android:layout_marginBottom="24dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@drawable/glass_panel"
-        android:padding="8dp"
+        android:background="@drawable/m3_panel_bottom"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
         android:elevation="14dp"
         android:visibility="gone">
 
@@ -125,37 +128,40 @@
             android:textColor="@color/white"
             android:textSize="10sp"
             android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
             android:background="@drawable/badge_beta"
-            android:paddingLeft="7dp"
-            android:paddingRight="7dp"
-            android:paddingTop="3dp"
-            android:paddingBottom="3dp"
+            android:paddingLeft="8dp"
+            android:paddingRight="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:layout_marginRight="8dp" />
 
         <TextView
             android:id="@+id/btn_dock_play_fullscreen"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="34dp"
             android:text="▶ Fullscreen"
             android:textColor="@color/white"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:background="@drawable/btn_pill"
-            android:paddingLeft="10dp"
-            android:paddingRight="10dp"
+            android:background="@drawable/m3_btn_tonal"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
             android:layout_marginRight="6dp" />
 
         <TextView
             android:id="@+id/btn_dock_pip"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="34dp"
             android:text="❐ PiP"
             android:textColor="@color/white"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:background="@drawable/glass_button"
+            android:background="@drawable/m3_chip"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
             android:layout_marginRight="6dp" />
@@ -163,13 +169,14 @@
         <TextView
             android:id="@+id/btn_dock_external"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="34dp"
             android:text="📺 External"
             android:textColor="@color/neon_cyan"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold"
+            android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:background="@drawable/btn_external_player"
+            android:background="@drawable/m3_chip"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
             android:layout_marginRight="6dp" />
@@ -177,26 +184,27 @@
         <TextView
             android:id="@+id/btn_dock_copy"
             android:layout_width="wrap_content"
-            android:layout_height="32dp"
+            android:layout_height="34dp"
             android:text="📋 Copy"
             android:textColor="@color/white"
-            android:textSize="11sp"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
             android:gravity="center"
-            android:background="@drawable/glass_button"
+            android:background="@drawable/m3_chip"
             android:paddingLeft="10dp"
             android:paddingRight="10dp"
             android:layout_marginRight="6dp" />
 
         <TextView
             android:id="@+id/btn_dock_close"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="32dp"
+            android:layout_height="34dp"
             android:text="✕"
-            android:textColor="@color/gray"
+            android:textColor="@color/m3_secondary_text"
             android:textSize="13sp"
             android:textStyle="bold"
             android:gravity="center"
-            android:background="@drawable/glass_button" />
+            android:background="@drawable/m3_chip" />
     </LinearLayout>
 
     <!-- Fullscreen Video Container with Notch & Gesture Support -->
@@ -220,7 +228,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <!-- Soul Browser Style Top Header Bar -->
+        <!-- Material 3 Top Header App Bar -->
         <LinearLayout
             android:id="@+id/player_top_bar"
             android:layout_width="match_parent"
@@ -228,25 +236,28 @@
             android:layout_gravity="top"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:paddingLeft="14dp"
-            android:paddingRight="14dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
-            android:background="@drawable/glass_panel"
-            android:layout_margin="12dp">
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:background="@drawable/m3_panel_top"
+            android:layout_margin="12dp"
+            android:clickable="true"
+            android:focusable="true">
 
             <TextView
                 android:id="@+id/btn_player_close"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:text="✕ Close"
                 android:textColor="@color/white"
                 android:textSize="12sp"
                 android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="12dp"
-                android:paddingRight="12dp" />
+                android:background="@drawable/m3_btn_tonal"
+                android:paddingLeft="14dp"
+                android:paddingRight="14dp" />
 
             <!-- Title / Channel info -->
             <TextView
@@ -254,26 +265,25 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginLeft="12dp"
-                android:layout_marginRight="8dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="10dp"
                 android:text="BOOTV Player"
                 android:textColor="@color/white"
-                android:textSize="13sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
                 android:singleLine="true"
                 android:ellipsize="marquee" />
 
-            <!-- Signature Soul Browser Clock & Battery status -->
+            <!-- Signature Soul/Material Status Chip (Clock & Battery) -->
             <LinearLayout
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="36dp"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/glass_button"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:paddingTop="5dp"
-                android:paddingBottom="5dp"
+                android:background="@drawable/m3_chip"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
                 android:layout_marginRight="8dp">
 
                 <TextView
@@ -283,6 +293,7 @@
                     android:text="12:00"
                     android:textColor="@color/white"
                     android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
                     android:textStyle="bold" />
 
                 <TextView
@@ -292,47 +303,51 @@
                     android:text=" 🔋 100%"
                     android:textColor="@color/neon_cyan"
                     android:textSize="11sp"
+                    android:fontFamily="sans-serif-medium"
                     android:layout_marginLeft="6dp" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/btn_aspect_ratio"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:text="⤢ Fit"
                 android:textColor="@color/white"
                 android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:layout_marginRight="6dp" />
+                android:background="@drawable/m3_chip"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:layout_marginRight="8dp" />
 
             <TextView
                 android:id="@+id/btn_pip"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:text="❐ PiP"
                 android:textColor="@color/white"
                 android:textSize="12sp"
                 android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:background="@drawable/glass_button"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:layout_marginRight="6dp" />
+                android:background="@drawable/m3_chip"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:layout_marginRight="8dp" />
 
             <TextView
                 android:id="@+id/btn_lock"
                 android:layout_width="wrap_content"
-                android:layout_height="34dp"
+                android:layout_height="36dp"
                 android:text="🔓 Lock"
                 android:textColor="@color/white"
                 android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:background="@drawable/btn_pill"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp" />
+                android:background="@drawable/m3_chip"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp" />
         </LinearLayout>
 
         <!-- Brightness Gesture HUD (Left) -->
@@ -344,7 +359,7 @@
             android:layout_marginLeft="36dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="@drawable/glass_panel"
+            android:background="@drawable/m3_panel_top"
             android:padding="16dp"
             android:visibility="gone">
 
@@ -352,20 +367,22 @@
                 android:id="@+id/txt_brightness"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="☀️ 80%"
+                android:text="☀️ 75%"
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center" />
 
             <ProgressBar
                 android:id="@+id/pb_brightness"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="100dp"
-                android:layout_height="6dp"
+                android:layout_height="4dp"
                 android:layout_marginTop="8dp"
                 android:max="100"
-                android:progress="80" />
+                android:progress="75"
+                android:progressDrawable="@drawable/m3_seekbar_progress" />
         </LinearLayout>
 
         <!-- Volume Gesture HUD (Right) -->
@@ -377,7 +394,7 @@
             android:layout_marginRight="36dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="@drawable/glass_panel"
+            android:background="@drawable/m3_panel_top"
             android:padding="16dp"
             android:visibility="gone">
 
@@ -389,16 +406,18 @@
                 android:textColor="@color/white"
                 android:textSize="18sp"
                 android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center" />
 
             <ProgressBar
                 android:id="@+id/pb_volume"
                 style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="100dp"
-                android:layout_height="6dp"
+                android:layout_height="4dp"
                 android:layout_marginTop="8dp"
                 android:max="100"
-                android:progress="75" />
+                android:progress="75"
+                android:progressDrawable="@drawable/m3_seekbar_progress" />
         </LinearLayout>
 
         <!-- Fast Forward / Rewind Seek HUD (Center) -->
@@ -409,7 +428,7 @@
             android:layout_gravity="center"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="@drawable/glass_panel"
+            android:background="@drawable/m3_panel_top"
             android:padding="20dp"
             android:visibility="gone">
 
@@ -421,6 +440,7 @@
                 android:textColor="@color/seek_blue"
                 android:textSize="22sp"
                 android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center" />
 
             <TextView
@@ -428,8 +448,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Release to Seek"
-                android:textColor="@color/gray"
+                android:textColor="@color/m3_secondary_text"
                 android:textSize="12sp"
+                android:fontFamily="sans-serif-medium"
                 android:layout_marginTop="4dp" />
         </LinearLayout>
 
@@ -439,38 +460,41 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|center_horizontal"
-            android:layout_marginBottom="90dp"
+            android:layout_marginBottom="110dp"
             android:text="Action"
             android:textColor="@color/white"
             android:textSize="14sp"
-            android:background="@drawable/glass_panel"
+            android:fontFamily="sans-serif-medium"
+            android:background="@drawable/m3_chip"
             android:paddingLeft="18dp"
             android:paddingRight="18dp"
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
             android:visibility="gone" />
 
-        <!-- Soul / Via Browser Style Bottom Timeline & Controls Bar -->
+        <!-- Material 3 Bottom Timeline & Media Controls Bar -->
         <LinearLayout
             android:id="@+id/player_bottom_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom"
             android:orientation="vertical"
-            android:paddingLeft="14dp"
-            android:paddingRight="14dp"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
-            android:background="@drawable/glass_panel"
-            android:layout_margin="12dp">
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="12dp"
+            android:background="@drawable/m3_panel_bottom"
+            android:layout_margin="12dp"
+            android:clickable="true"
+            android:focusable="true">
 
-            <!-- Scrubber / Timeline Row -->
+            <!-- Material Slider / Timeline Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="6dp">
+                android:layout_marginBottom="8dp">
 
                 <TextView
                     android:id="@+id/txt_time_current"
@@ -479,30 +503,33 @@
                     android:text="00:00"
                     android:textColor="@color/white"
                     android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
                     android:textStyle="bold" />
 
                 <SeekBar
                     android:id="@+id/player_seekbar"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="48dp"
                     android:layout_weight="1"
                     android:max="1000"
                     android:progress="0"
-                    android:progressDrawable="@drawable/seekbar_progress"
-                    android:thumb="@drawable/seekbar_thumb"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp" />
+                    android:splitTrack="false"
+                    android:progressDrawable="@drawable/m3_seekbar_progress"
+                    android:thumb="@drawable/m3_seekbar_thumb"
+                    android:paddingLeft="14dp"
+                    android:paddingRight="14dp" />
 
                 <TextView
                     android:id="@+id/txt_time_total"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="00:00"
-                    android:textColor="@color/gray"
+                    android:textColor="@color/m3_secondary_text"
+                    android:fontFamily="sans-serif-medium"
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Playback Controls Row -->
+            <!-- Material Playback Controls Row -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -512,41 +539,41 @@
                 <TextView
                     android:id="@+id/btn_rewind_10"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:text="⏪ -10s"
+                    android:layout_height="38dp"
+                    android:text="↺ 10s"
                     android:textColor="@color/white"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium"
                     android:gravity="center"
-                    android:background="@drawable/btn_pill"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
-                    android:layout_marginRight="6dp" />
+                    android:background="@drawable/m3_btn_tonal"
+                    android:paddingLeft="14dp"
+                    android:paddingRight="14dp"
+                    android:layout_marginRight="10dp" />
 
                 <TextView
                     android:id="@+id/btn_play_pause"
-                    android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:text="⏸ Pause"
+                    android:layout_width="48dp"
+                    android:layout_height="44dp"
+                    android:text="▶"
                     android:textColor="@color/white"
-                    android:textSize="12sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:gravity="center"
-                    android:background="@drawable/btn_pill"
-                    android:paddingLeft="14dp"
-                    android:paddingRight="14dp"
-                    android:layout_marginRight="6dp" />
+                    android:background="@drawable/m3_btn_play_pause"
+                    android:layout_marginRight="10dp" />
 
                 <TextView
                     android:id="@+id/btn_forward_10"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:text="⏩ +10s"
+                    android:layout_height="38dp"
+                    android:text="↻ 10s"
                     android:textColor="@color/white"
-                    android:textSize="12sp"
+                    android:textSize="13sp"
+                    android:fontFamily="sans-serif-medium"
                     android:gravity="center"
-                    android:background="@drawable/btn_pill"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp" />
+                    android:background="@drawable/m3_btn_tonal"
+                    android:paddingLeft="14dp"
+                    android:paddingRight="14dp" />
 
                 <View
                     android:layout_width="0dp"
@@ -556,26 +583,28 @@
                 <TextView
                     android:id="@+id/btn_speed"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
+                    android:layout_height="36dp"
                     android:text="⚡ 1.0x"
                     android:textColor="@color/white"
                     android:textSize="12sp"
+                    android:fontFamily="sans-serif-medium"
                     android:gravity="center"
-                    android:background="@drawable/glass_button"
+                    android:background="@drawable/m3_chip"
                     android:paddingLeft="12dp"
                     android:paddingRight="12dp"
-                    android:layout_marginRight="6dp" />
+                    android:layout_marginRight="8dp" />
 
                 <TextView
                     android:id="@+id/btn_fullscreen_ext_player"
                     android:layout_width="wrap_content"
-                    android:layout_height="34dp"
-                    android:text="📺 VLC / Player"
+                    android:layout_height="36dp"
+                    android:text="📺 External"
                     android:textColor="@color/neon_cyan"
                     android:textSize="12sp"
                     android:textStyle="bold"
+                    android:fontFamily="sans-serif-medium"
                     android:gravity="center"
-                    android:background="@drawable/btn_external_player"
+                    android:background="@drawable/m3_chip"
                     android:paddingLeft="12dp"
                     android:paddingRight="12dp" />
             </LinearLayout>

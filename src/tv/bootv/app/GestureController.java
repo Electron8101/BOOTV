@@ -255,15 +255,6 @@ public class GestureController {
                     return true;
                 }
 
-                float height = mTouchView.getHeight();
-                // If user touches bottom 22% (player controlbar & native seekbar), forward to video view!
-                if (height > 0 && event.getY() > height * 0.78f) {
-                    if (mCustomView != null) {
-                        mCustomView.dispatchTouchEvent(event);
-                    }
-                    return true;
-                }
-
                 boolean handled = mGestureDetector.onTouchEvent(event);
                 if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
                     if (mIsLongPressSpeedBoost) {
@@ -366,18 +357,24 @@ public class GestureController {
         mBottomBar = bottomBar;
     }
 
+    private final Runnable mAutoHideRunnable = new Runnable() {
+        @Override
+        public void run() {
+            hideControls();
+        }
+    };
+
     public void scheduleAutoHideTopBar() {
         scheduleAutoHideControls();
     }
 
+    public void cancelAutoHideControls() {
+        mHandler.removeCallbacks(mAutoHideRunnable);
+    }
+
     public void scheduleAutoHideControls() {
-        mHandler.removeCallbacksAndMessages(mTopBar);
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                hideControls();
-            }
-        }, 4500);
+        mHandler.removeCallbacks(mAutoHideRunnable);
+        mHandler.postDelayed(mAutoHideRunnable, 4500);
     }
 
     public void showControls() {

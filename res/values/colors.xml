@@ -14,6 +14,12 @@
     <color name="glass_border">#35FFFFFF</color>
     <color name="glass_btn_bg">#2EFFFFFF</color>
     <color name="neon_cyan">#FF00F0FF</color>
-    <color name="neon_purple">#FFB026FF</color>
-    <color name="beta_orange">#FFFF6B00</color>
+    <!-- Material 3 Palette -->
+    <color name="m3_surface_dark">#E61A1B20</color>
+    <color name="m3_surface_card">#F022242B</color>
+    <color name="m3_surface_tonal">#2E313A</color>
+    <color name="m3_surface_variant">#3D424E</color>
+    <color name="m3_primary">#FFE50914</color>
+    <color name="m3_secondary_text">#FFA0A6B2</color>
+    <color name="m3_outline">#33FFFFFF</color>
 </resources>
