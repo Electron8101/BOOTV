@@ -1124,6 +1124,12 @@ public class MainActivity extends Activity {
         TextView txtSeekDelta = findViewById(R.id.txt_seek_delta);
         TextView hudFeedback = findViewById(R.id.hud_feedback);
 
+        View seekZoneLeft = findViewById(R.id.seek_zone_left);
+        View seekZoneRight = findViewById(R.id.seek_zone_right);
+        View badgeSpeedBoost = findViewById(R.id.badge_speed_boost);
+        TextView txtSeekTarget = findViewById(R.id.txt_seek_target);
+        TextView txtVolumeIcon = findViewById(R.id.txt_volume_icon);
+
         mGestureController = new GestureController(
                 this,
                 mGestureTouchView,
@@ -1159,6 +1165,10 @@ public class MainActivity extends Activity {
                 }
         );
 
+        mGestureController.setSeekZones(seekZoneLeft, seekZoneRight);
+        mGestureController.setSpeedBoostBadge(badgeSpeedBoost);
+        mGestureController.setSeekTargetView(txtSeekTarget);
+        mGestureController.setVolumeIconView(txtVolumeIcon);
         mGestureController.setBottomBar(mPlayerBottomBar);
 
         mBtnPlayerClose.setOnClickListener(new View.OnClickListener() {
@@ -2092,6 +2102,9 @@ public class MainActivity extends Activity {
                 if (mBtnPlayPause != null) {
                     mBtnPlayPause.setText(isPlaying ? "⏸" : "▶");
                 }
+                if (mGestureController != null) {
+                    mGestureController.updatePlaybackTime((long) currentSec, (long) mVideoDuration);
+                }
             }
         });
     }
@@ -2139,9 +2152,9 @@ public class MainActivity extends Activity {
         long m = (totalSec % 3600) / 60;
         long s = totalSec % 60;
         if (h > 0) {
-            return String.format(Locale.getDefault(), "%02d:%02d:%02d", h, m, s);
+            return String.format(Locale.getDefault(), "%d:%02d:%02d", h, m, s);
         } else {
-            return String.format(Locale.getDefault(), "%02d:%02d:%02d", 0, m, s);
+            return String.format(Locale.getDefault(), "%02d:%02d", m, s);
         }
     }
 

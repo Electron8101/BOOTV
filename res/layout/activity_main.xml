@@ -275,6 +275,21 @@
                 android:singleLine="true"
                 android:ellipsize="marquee" />
 
+            <!-- Quality Badge -->
+            <TextView
+                android:id="@+id/txt_player_quality"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:text="HD"
+                android:textColor="@color/white"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:background="@drawable/badge_beta"
+                android:paddingLeft="8dp"
+                android:paddingRight="8dp"
+                android:layout_marginRight="8dp" />
+
             <!-- Signature Soul/Material Status Chip (Clock & Battery) -->
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -350,77 +365,201 @@
                 android:paddingRight="12dp" />
         </LinearLayout>
 
-        <!-- Brightness Gesture HUD (Left) -->
+        <!-- Left Double-Tap Seek Zone (Curved Ripple Overlay - Hossain Shifat player style) -->
+        <FrameLayout
+            android:id="@+id/seek_zone_left"
+            android:layout_width="140dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="left"
+            android:background="@drawable/m3_seek_zone_left"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏪"
+                    android:textSize="26sp"
+                    android:textColor="@color/white" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="-10s"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Right Double-Tap Seek Zone (Curved Ripple Overlay - Hossain Shifat player style) -->
+        <FrameLayout
+            android:id="@+id/seek_zone_right"
+            android:layout_width="140dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:background="@drawable/m3_seek_zone_right"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⏩"
+                    android:textSize="26sp"
+                    android:textColor="@color/white" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="+10s"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Speed Boost Badge (Top Pill - Hossain Shifat player style) -->
+        <LinearLayout
+            android:id="@+id/badge_speed_boost"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/m3_speed_badge"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:gravity="center"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/txt_speed_boost"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚡ 2.0x Speed Playing"
+                android:textColor="@color/neon_cyan"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Glassmorphic Vertical Brightness Capsule BarPill (Left) -->
         <LinearLayout
             android:id="@+id/hud_brightness"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="66dp"
+            android:layout_height="170dp"
             android:layout_gravity="center_vertical|left"
-            android:layout_marginLeft="36dp"
+            android:layout_marginLeft="28dp"
             android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/m3_panel_top"
-            android:padding="16dp"
+            android:gravity="center_horizontal"
+            android:background="@drawable/m3_bar_pill"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
             android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="☀️"
+                android:textSize="18sp"
+                android:textColor="@color/white" />
+
+            <FrameLayout
+                android:layout_width="28dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp">
+
+                <ProgressBar
+                    android:id="@+id/pb_brightness"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="86dp"
+                    android:layout_height="6dp"
+                    android:layout_gravity="center"
+                    android:rotation="270"
+                    android:max="100"
+                    android:progress="75"
+                    android:progressDrawable="@drawable/m3_vertical_bar" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/txt_brightness"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="☀️ 75%"
+                android:text="75%"
                 android:textColor="@color/white"
-                android:textSize="18sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                android:fontFamily="sans-serif-medium"
-                android:gravity="center" />
-
-            <ProgressBar
-                android:id="@+id/pb_brightness"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="100dp"
-                android:layout_height="4dp"
-                android:layout_marginTop="8dp"
-                android:max="100"
-                android:progress="75"
-                android:progressDrawable="@drawable/m3_seekbar_progress" />
+                android:fontFamily="monospace" />
         </LinearLayout>
 
-        <!-- Volume Gesture HUD (Right) -->
+        <!-- Glassmorphic Vertical Volume Capsule BarPill (Right) -->
         <LinearLayout
             android:id="@+id/hud_volume"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="66dp"
+            android:layout_height="170dp"
             android:layout_gravity="center_vertical|right"
-            android:layout_marginRight="36dp"
+            android:layout_marginRight="28dp"
             android:orientation="vertical"
-            android:gravity="center"
-            android:background="@drawable/m3_panel_top"
-            android:padding="16dp"
+            android:gravity="center_horizontal"
+            android:background="@drawable/m3_bar_pill"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp"
             android:visibility="gone">
+
+            <TextView
+                android:id="@+id/txt_volume_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔊"
+                android:textSize="18sp"
+                android:textColor="@color/white" />
+
+            <FrameLayout
+                android:layout_width="28dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp">
+
+                <ProgressBar
+                    android:id="@+id/pb_volume"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="86dp"
+                    android:layout_height="6dp"
+                    android:layout_gravity="center"
+                    android:rotation="270"
+                    android:max="100"
+                    android:progress="75"
+                    android:progressDrawable="@drawable/m3_vertical_bar" />
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/txt_volume"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="🔊 75%"
+                android:text="75%"
                 android:textColor="@color/white"
-                android:textSize="18sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                android:fontFamily="sans-serif-medium"
-                android:gravity="center" />
-
-            <ProgressBar
-                android:id="@+id/pb_volume"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="100dp"
-                android:layout_height="4dp"
-                android:layout_marginTop="8dp"
-                android:max="100"
-                android:progress="75"
-                android:progressDrawable="@drawable/m3_seekbar_progress" />
+                android:fontFamily="monospace" />
         </LinearLayout>
 
-        <!-- Fast Forward / Rewind Seek HUD (Center) -->
+        <!-- Fast Forward / Rewind Seek HUD (Center - Hossain Shifat player style) -->
         <LinearLayout
             android:id="@+id/hud_seek"
             android:layout_width="wrap_content"
@@ -429,19 +568,34 @@
             android:orientation="vertical"
             android:gravity="center"
             android:background="@drawable/m3_panel_top"
-            android:padding="20dp"
+            android:paddingLeft="28dp"
+            android:paddingRight="28dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="18dp"
             android:visibility="gone">
+
+            <TextView
+                android:id="@+id/txt_seek_target"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="00:00"
+                android:textColor="@color/white"
+                android:textSize="40sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="center" />
 
             <TextView
                 android:id="@+id/txt_seek_delta"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="⏩ +10s"
-                android:textColor="@color/seek_blue"
-                android:textSize="22sp"
+                android:text="[+00:00]"
+                android:textColor="@color/neon_cyan"
+                android:textSize="20sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-medium"
-                android:gravity="center" />
+                android:gravity="center"
+                android:layout_marginTop="2dp" />
 
             <TextView
                 android:id="@+id/txt_seek_hint"

@@ -13,6 +13,8 @@ import android.view.WindowManager;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import java.util.Locale;
+
 public class GestureController {
 
     public interface VideoActionListener {
@@ -39,6 +41,14 @@ public class GestureController {
     private final View mHudSeek;
     private final TextView mTxtSeekDelta;
     private final TextView mHudFeedback;
+
+    private View mSeekZoneLeft;
+    private View mSeekZoneRight;
+    private View mBadgeSpeedBoost;
+    private TextView mTxtSeekTarget;
+    private TextView mTxtVolumeIcon;
+    private long mCurrentVideoPosition = 0;
+    private long mCurrentVideoDuration = 0;
 
     private View mCustomView; // Active video view reference
 
@@ -188,10 +198,12 @@ public class GestureController {
                 if (width <= 0) return false;
 
                 if (e.getX() < width * 0.35f) {
+                    triggerSeekZone(mSeekZoneLeft);
                     if (mListener != null) mListener.onSeek(-10);
                     showFeedback("⏪ -10s");
                     return true;
                 } else if (e.getX() > width * 0.65f) {
+                    triggerSeekZone(mSeekZoneRight);
                     if (mListener != null) mListener.onSeek(10);
                     showFeedback("⏩ +10s");
                     return true;
@@ -209,7 +221,13 @@ public class GestureController {
                 if (mListener != null) {
                     mListener.onSpeedChange(2.0f);
                 }
-                showFeedback("⚡ 2x Speed (Hold)");
+                if (mBadgeSpeedBoost != null) {
+                    mBadgeSpeedBoost.setVisibility(View.VISIBLE);
+                    mBadgeSpeedBoost.setAlpha(0f);
+                    mBadgeSpeedBoost.animate().alpha(1f).setDuration(160).start();
+                } else {
+                    showFeedback("⚡ 2x Speed (Hold)");
+                }
             }
 
             @Override
@@ -262,13 +280,23 @@ public class GestureController {
                         if (mListener != null) {
                             mListener.onSpeedChange(mPreBoostSpeed);
                         }
-                        showFeedback("⚡ Speed: " + mPreBoostSpeed + "x");
+                        if (mBadgeSpeedBoost != null) {
+                            mBadgeSpeedBoost.animate().alpha(0f).setDuration(200).withEndAction(new Runnable() {
+                                @Override
+                                public void run() {
+                                    mBadgeSpeedBoost.setVisibility(View.GONE);
+                                    mBadgeSpeedBoost.setAlpha(1f);
+                                }
+                            }).start();
+                        } else {
+                            showFeedback("⚡ Speed: " + mPreBoostSpeed + "x");
+                        }
                     }
                     if (mActiveGesture == GESTURE_SEEK && mCurrentSeekDelta != 0) {
                         if (mListener != null) {
                             mListener.onSeek(mCurrentSeekDelta);
                         }
-                        showFeedback((mCurrentSeekDelta > 0 ? "⏩ +" : "⏪ ") + mCurrentSeekDelta + "s");
+                        showFeedback((mCurrentSeekDelta > 0 ? "⏩ +" : "⏪ ") + Math.abs(mCurrentSeekDelta) + "s");
                     }
                     mActiveGesture = GESTURE_NONE;
                     mCurrentSeekDelta = 0;
@@ -277,6 +305,65 @@ public class GestureController {
                 return true;
             }
         });
+    }
+
+    public void setSeekZones(View left, View right) {
+        mSeekZoneLeft = left;
+        mSeekZoneRight = right;
+    }
+
+    public void setSpeedBoostBadge(View badge) {
+        mBadgeSpeedBoost = badge;
+    }
+
+    public void setSeekTargetView(TextView txtSeekTarget) {
+        mTxtSeekTarget = txtSeekTarget;
+    }
+
+    public void setVolumeIconView(TextView txtVolumeIcon) {
+        mTxtVolumeIcon = txtVolumeIcon;
+    }
+
+    public void updatePlaybackTime(long positionSec, long durationSec) {
+        mCurrentVideoPosition = positionSec;
+        mCurrentVideoDuration = durationSec;
+    }
+
+    private void triggerSeekZone(final View zone) {
+        if (zone == null) return;
+        zone.setVisibility(View.VISIBLE);
+        zone.setAlpha(0f);
+        zone.setScaleX(0.85f);
+        zone.setScaleY(0.85f);
+        zone.animate().alpha(1f).scaleX(1.0f).scaleY(1.0f).setDuration(160).start();
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (zone != null && zone.getVisibility() == View.VISIBLE) {
+                    zone.animate().alpha(0f).scaleX(0.9f).scaleY(0.9f).setDuration(220).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            zone.setVisibility(View.GONE);
+                            zone.setAlpha(1f);
+                            zone.setScaleX(1f);
+                            zone.setScaleY(1f);
+                        }
+                    }).start();
+                }
+            }
+        }, 550);
+    }
+
+    private String formatTime(long totalSec) {
+        if (totalSec < 0) totalSec = 0;
+        long h = totalSec / 3600;
+        long m = (totalSec % 3600) / 60;
+        long s = totalSec % 60;
+        if (h > 0) {
+            return String.format(Locale.getDefault(), "%d:%02d:%02d", h, m, s);
+        } else {
+            return String.format(Locale.getDefault(), "%02d:%02d", m, s);
+        }
     }
 
     public void setCustomView(View customView) {
@@ -292,7 +379,7 @@ public class GestureController {
         mActivity.getWindow().setAttributes(lp);
 
         int percent = (int) (newBrightness * 100);
-        mTxtBrightness.setText("☀️ " + percent + "%");
+        mTxtBrightness.setText(percent + "%");
         mPbBrightness.setProgress(percent);
         mHudBrightness.setVisibility(View.VISIBLE);
         mHudVolume.setVisibility(View.GONE);
@@ -309,22 +396,41 @@ public class GestureController {
         mAudioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVolume, 0);
 
         int percent = (int) (((float) newVolume / mMaxVolume) * 100);
-        mTxtVolume.setText("🔊 " + percent + "%");
+        mTxtVolume.setText(percent + "%");
         mPbVolume.setProgress(percent);
+        if (mTxtVolumeIcon != null) {
+            mTxtVolumeIcon.setText(newVolume == 0 ? "🔇" : (newVolume < mMaxVolume / 2 ? "🔉" : "🔊"));
+        }
         mHudVolume.setVisibility(View.VISIBLE);
         mHudBrightness.setVisibility(View.GONE);
         mHudSeek.setVisibility(View.GONE);
     }
 
     private void handleSeekScroll(float deltaX, float width) {
-        // Swipe across width calculates up to +/- 120 seconds seek
-        float percentX = deltaX / width;
-        mCurrentSeekDelta = (int) (percentX * 120);
+        // Continuous MX-Player / Hossain Shifat non-linear seek formula
+        float absDx = Math.abs(deltaX);
+        float sign = deltaX >= 0 ? 1.0f : -1.0f;
+        mCurrentSeekDelta = (int) (sign * Math.pow(absDx / 8.0f, 1.25f));
 
         if (mCurrentSeekDelta == 0) return;
 
-        String prefix = mCurrentSeekDelta > 0 ? "⏩ +" : "⏪ ";
-        mTxtSeekDelta.setText(prefix + Math.abs(mCurrentSeekDelta) + "s");
+        long target = mCurrentVideoPosition + mCurrentSeekDelta;
+        if (target < 0) target = 0;
+        if (mCurrentVideoDuration > 0 && target > mCurrentVideoDuration) {
+            target = mCurrentVideoDuration;
+        }
+
+        if (mTxtSeekTarget != null) {
+            mTxtSeekTarget.setText(formatTime(target));
+        }
+
+        String signStr = mCurrentSeekDelta >= 0 ? "+" : "-";
+        long absDelta = Math.abs(mCurrentSeekDelta);
+        long deltaM = absDelta / 60;
+        long deltaS = absDelta % 60;
+        String deltaFormatted = String.format(Locale.getDefault(), "[%s%02d:%02d]", signStr, deltaM, deltaS);
+        mTxtSeekDelta.setText(deltaFormatted);
+
         mHudSeek.setVisibility(View.VISIBLE);
         mHudBrightness.setVisibility(View.GONE);
         mHudVolume.setVisibility(View.GONE);
