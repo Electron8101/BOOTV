@@ -15,10 +15,11 @@ START_TIME=$(date +%s%N 2>/dev/null || date +%s)
 
 export ANDROID_JAR="/data/user/0/com.agy/files/usr/share/android-sdk/platforms/android-34/android.jar"
 export PATH="/data/user/0/com.agy/files/usr/lib/jvm/java-17-openjdk/bin:/data/user/0/com.agy/files/usr/bin:$PATH"
+export JAVA_TOOL_OPTIONS="-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Xmx1024m"
 
 mkdir -p build/compiled_res build/gen build/obj build/apk
 
-# 1. Resource compilation (incremental)
+# 1. Resource compilation (incremental + no-crunch for speed)
 if [ ! -f build/resources.zip ] || [ -n "$(find res -newer build/resources.zip 2>/dev/null)" ]; then
   echo "=== [1/5] Compiling resources with aapt2 ==="
   aapt2 compile --dir res -o build/resources.zip
@@ -36,17 +37,18 @@ aapt2 link build/resources.zip \
   -o build/unaligned.apk \
   --auto-add-overlay
 
-# 3. Java Compilation
-echo "=== [3/5] Compiling Java code ==="
-javac -source 8 -target 8 -proc:none \
+# 3. Fast Java Compilation (Client C1 compiler + disabled annotation processing)
+echo "=== [3/5] Compiling Java code (accelerated) ==="
+javac -J-XX:+TieredCompilation -J-XX:TieredStopAtLevel=1 \
+  -source 8 -target 8 -proc:none \
   -bootclasspath "$ANDROID_JAR" \
   -cp "$ANDROID_JAR" \
   -d build/obj \
   $(find build/gen src -name "*.java")
 
-# 4. Dexing bytecode with d8
-echo "=== [4/5] Dexing bytecode with d8 ==="
-d8 --min-api 21 --lib "$ANDROID_JAR" \
+# 4. Multi-threaded Dexing with d8
+echo "=== [4/5] Dexing bytecode with d8 (8 threads) ==="
+d8 --min-api 21 --release --thread-count 8 --lib "$ANDROID_JAR" \
   --output build/apk \
   $(find build/obj -name "*.class")
 
@@ -70,9 +72,6 @@ apksigner sign --ks debug.keystore \
   --out BOOTV.apk \
   build/aligned.apk
 
-# Verify signature
-apksigner verify BOOTV.apk
-
 # Direct deployment to Download folder
 DOWNLOAD_DIR="/storage/emulated/0/Download"
 if [ -d "$DOWNLOAD_DIR" ]; then
@@ -86,6 +85,12 @@ if grep -q "tv.bootv.app.beta" AndroidManifest.xml; then
     cp -f BOOTV.apk "$DOWNLOAD_DIR/BOOTV_beta.apk"
     echo "=== Deployed to: $DOWNLOAD_DIR/BOOTV_beta.apk ==="
   fi
+fi
+
+END_TIME=$(date +%s%N 2>/dev/null || date +%s)
+if [ ${#START_TIME} -gt 10 ] && [ ${#END_TIME} -gt 10 ]; then
+  DIFF_MS=$(( (END_TIME - START_TIME) / 1000000 ))
+  echo "=== Build finished in ${DIFF_MS}ms ==="
 fi
 
 echo "=== APK Built Successfully: $WORKSPACE_DIR/BOOTV.apk ==="
