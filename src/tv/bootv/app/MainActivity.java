@@ -1777,6 +1777,9 @@ public class MainActivity extends Activity {
         mVideoSurfaceHolder.removeAllViews();
         mFullscreenContainer.setVisibility(View.GONE);
         mWebView.setVisibility(View.VISIBLE);
+        if (mFabSettings != null) {
+            mFabSettings.setVisibility(View.VISIBLE);
+        }
 
         if (mPlayerBottomBar != null) {
             mPlayerBottomBar.setVisibility(View.GONE);

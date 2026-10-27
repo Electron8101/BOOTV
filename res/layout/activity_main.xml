@@ -60,7 +60,6 @@
         android:layout_marginRight="20dp"
         android:background="@drawable/fab_background"
         android:alpha="0.6"
-        android:visibility="gone"
         android:clickable="true"
         android:focusable="true">
 
