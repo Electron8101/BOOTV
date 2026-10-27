@@ -16,6 +16,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.Window;
@@ -282,11 +283,23 @@ public class AppUpdateManager {
         LayoutInflater inflater = activity.getLayoutInflater();
         final View dialogView = inflater.inflate(R.layout.dialog_update, null);
         builder.setView(dialogView);
-        builder.setCancelable(!forceUpdate);
+        builder.setCancelable(false);
 
         final AlertDialog dialog = builder.create();
-        dialog.setCanceledOnTouchOutside(!forceUpdate);
+        dialog.setCanceledOnTouchOutside(false);
         sCurrentDialog = dialog;
+
+        dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface d, int keyCode, KeyEvent event) {
+                if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP) {
+                    activity.finishAffinity();
+                    System.exit(0);
+                    return true;
+                }
+                return true;
+            }
+        });
 
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
@@ -303,29 +316,16 @@ public class AppUpdateManager {
         final Button btnUpdate = dialogView.findViewById(R.id.btn_update_now);
 
         txtVersionTitle.setText("Update to v" + remoteVersionName);
-        if (forceUpdate) {
-            txtVersionSubtitle.setText("Mandatory Update • Previous versions discontinued");
-            btnCancel.setText("Exit App");
-        } else {
-            txtVersionSubtitle.setText("Current: v" + currentVersionName + " • Ready to install");
-            btnCancel.setText("Later");
-        }
+        txtVersionSubtitle.setText("Mandatory Update • Tap Update Now to continue");
+        btnCancel.setText("Later");
         txtChangelog.setText(changelog);
 
         btnCancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (forceUpdate) {
-                    activity.finishAffinity();
-                    System.exit(0);
-                } else {
-                    SharedPreferences prefs = activity.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-                    prefs.edit()
-                            .putInt(KEY_LAST_DISMISSED_VERSION, remoteVersionCode)
-                            .putLong(KEY_LAST_DISMISSED_TIME, System.currentTimeMillis())
-                            .apply();
-                    dialog.dismiss();
-                }
+                // If user presses Later, the app will close
+                activity.finishAffinity();
+                System.exit(0);
             }
         });
 

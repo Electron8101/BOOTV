@@ -1,8 +1,8 @@
 {
-  "versionCode": 14,
-  "versionName": "1.9",
-  "minRequiredVersion": 14,
+  "versionCode": 15,
+  "versionName": "2.0",
+  "minRequiredVersion": 15,
   "forceUpdate": true,
   "apkUrl": "https://raw.githubusercontent.com/Electron8101/BOOTV/main/BOOTV.apk",
-  "changelog": "🚨 MANDATORY UPDATE 🚨\n- Previous versions have been discontinued\n- Must update to latest version to continue watching\n- Auto-update background checker enabled\n- Instant update popup notification while using app"
+  "changelog": "🚨 MANDATORY UPDATE 🚨\n- Previous versions have been discontinued\n- Must update to latest version to continue watching\n- Popup cannot be dismissed; pressing Later will close the app\n- Auto-update background checker enabled"
 }
