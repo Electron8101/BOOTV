@@ -396,7 +396,13 @@ public class MainActivity extends Activity {
             if (key != null) {
                 key.setOnClickListener(new View.OnClickListener() {
                     @Override
-                    public void onClick(View v) {
+                    public void onClick(final View v) {
+                        v.animate().scaleX(0.88f).scaleY(0.88f).setDuration(50).withEndAction(new Runnable() {
+                            @Override
+                            public void run() {
+                                v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(70).start();
+                            }
+                        }).start();
                         onKeypadDigit(key.getText().toString());
                     }
                 });
@@ -407,7 +413,13 @@ public class MainActivity extends Activity {
         if (keyDel != null) {
             keyDel.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) {
+                public void onClick(final View v) {
+                    v.animate().scaleX(0.88f).scaleY(0.88f).setDuration(50).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(70).start();
+                        }
+                    }).start();
                     if (mEnteredPin.length() > 0) {
                         mEnteredPin.deleteCharAt(mEnteredPin.length() - 1);
                         updatePinDots();
@@ -1148,6 +1160,13 @@ public class MainActivity extends Activity {
         }
 
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+        mWebView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        mWebView.setScrollBarStyle(View.SCROLLBARS_INSIDE_OVERLAY);
+        mWebView.setScrollbarFadingEnabled(true);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            mWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
 
         mWebView.setWebViewClient(new WebViewClient() {
             @Override

@@ -199,9 +199,17 @@ public class GestureController {
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
                 if (mTopBar.getVisibility() == View.VISIBLE) {
-                    mTopBar.setVisibility(View.GONE);
+                    mTopBar.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            mTopBar.setVisibility(View.GONE);
+                            mTopBar.setAlpha(1f);
+                        }
+                    }).start();
                 } else {
+                    mTopBar.setAlpha(0f);
                     mTopBar.setVisibility(View.VISIBLE);
+                    mTopBar.animate().alpha(1f).setDuration(220).start();
                     scheduleAutoHideTopBar();
                 }
                 return true;
@@ -292,11 +300,23 @@ public class GestureController {
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                mHudBrightness.setVisibility(View.GONE);
-                mHudVolume.setVisibility(View.GONE);
-                mHudSeek.setVisibility(View.GONE);
+                fadeOutHud(mHudBrightness);
+                fadeOutHud(mHudVolume);
+                fadeOutHud(mHudSeek);
             }
         }, 700);
+    }
+
+    private void fadeOutHud(final View hud) {
+        if (hud != null && hud.getVisibility() == View.VISIBLE) {
+            hud.animate().alpha(0f).setDuration(200).withEndAction(new Runnable() {
+                @Override
+                public void run() {
+                    hud.setVisibility(View.GONE);
+                    hud.setAlpha(1f);
+                }
+            }).start();
+        }
     }
 
     public void scheduleAutoHideTopBar() {
@@ -304,18 +324,36 @@ public class GestureController {
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                mTopBar.setVisibility(View.GONE);
+                if (mTopBar != null && mTopBar.getVisibility() == View.VISIBLE) {
+                    mTopBar.animate().alpha(0f).setDuration(300).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            mTopBar.setVisibility(View.GONE);
+                            mTopBar.setAlpha(1f);
+                        }
+                    }).start();
+                }
             }
         }, 4000);
     }
 
     public void showFeedback(String message) {
         mHudFeedback.setText(message);
+        mHudFeedback.setAlpha(0f);
         mHudFeedback.setVisibility(View.VISIBLE);
+        mHudFeedback.animate().alpha(1f).setDuration(160).start();
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                mHudFeedback.setVisibility(View.GONE);
+                if (mHudFeedback != null && mHudFeedback.getVisibility() == View.VISIBLE) {
+                    mHudFeedback.animate().alpha(0f).setDuration(220).withEndAction(new Runnable() {
+                        @Override
+                        public void run() {
+                            mHudFeedback.setVisibility(View.GONE);
+                            mHudFeedback.setAlpha(1f);
+                        }
+                    }).start();
+                }
             }
         }, 1500);
     }
