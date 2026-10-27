@@ -91,6 +91,32 @@ public class MainActivity extends Activity {
     private static final String EMBED_BRIDGE_SCRIPT =
         "<script>" +
         "(function() {" +
+        "  function getAllVideos(root) {" +
+        "    var res = [];" +
+        "    try {" +
+        "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
+        "      var n = walker.currentNode;" +
+        "      while (n) {" +
+        "        if (n.tagName === 'VIDEO') res.push(n);" +
+        "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
+        "        n = walker.nextNode();" +
+        "      }" +
+        "    } catch(e) {}" +
+        "    return res;" +
+        "  }" +
+        "  function getPrimary() {" +
+        "    var fs = document.fullscreenElement || document.webkitFullscreenElement;" +
+        "    if (fs) {" +
+        "      if (fs.tagName === 'VIDEO') return fs;" +
+        "      var fsv = fs.querySelector ? fs.querySelector('video') : null;" +
+        "      if (fsv) return fsv;" +
+        "    }" +
+        "    var vs = getAllVideos(document);" +
+        "    for (var i = 0; i < vs.length; i++) {" +
+        "      if (!vs[i].paused && vs[i].currentTime > 0) return vs[i];" +
+        "    }" +
+        "    return vs.length > 0 ? vs[0] : null;" +
+        "  }" +
         "  function seek(delta) {" +
         "    try {" +
         "      if (window.jwplayer) {" +
@@ -104,12 +130,10 @@ public class MainActivity extends Activity {
         "      }" +
         "    } catch(e) {}" +
         "    try {" +
-        "      var vs = document.querySelectorAll('video');" +
-        "      for (var i = 0; i < vs.length; i++) {" +
-        "        var v = vs[i];" +
-        "        var target = Math.max(0, v.currentTime + delta);" +
-        "        if (v.duration) target = Math.min(v.duration, target);" +
-        "        v.currentTime = target;" +
+        "      var v = getPrimary();" +
+        "      if (v) {" +
+        "        var d = (v.duration && isFinite(v.duration)) ? v.duration : (v.seekable && v.seekable.length > 0 ? v.seekable.end(v.seekable.length - 1) : 999999);" +
+        "        v.currentTime = Math.max(0, Math.min(d, (v.currentTime || 0) + delta));" +
         "      }" +
         "    } catch(e) {}" +
         "  }" +
@@ -117,35 +141,14 @@ public class MainActivity extends Activity {
         "    try {" +
         "      if (window.jwplayer) {" +
         "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
-        "        if (p) {" +
-        "          if (shouldPlay) {" +
-        "            if (typeof p.play === 'function') p.play(true);" +
-        "          } else {" +
-        "            if (typeof p.pause === 'function') p.pause(true);" +
-        "            else if (typeof p.play === 'function') p.play(false);" +
-        "          }" +
-        "          return;" +
-        "        }" +
+        "        if (p) { if (shouldPlay) p.play(true); else p.pause(true); return; }" +
         "      }" +
         "    } catch(e) {}" +
         "    try {" +
-        "      if (window.videojs && typeof window.videojs.getAllPlayers === 'function') {" +
-        "        var vjsList = window.videojs.getAllPlayers();" +
-        "        for (var k = 0; k < vjsList.length; k++) {" +
-        "          var pl = vjsList[k];" +
-        "          if (pl) {" +
-        "            if (shouldPlay) { if (typeof pl.play === 'function') pl.play(); }" +
-        "            else { if (typeof pl.pause === 'function') pl.pause(); }" +
-        "          }" +
-        "        }" +
-        "      }" +
-        "    } catch(e) {}" +
-        "    try {" +
-        "      var vs = document.querySelectorAll('video');" +
+        "      var vs = getAllVideos(document);" +
         "      for (var i = 0; i < vs.length; i++) {" +
-        "        var v = vs[i];" +
-        "        if (shouldPlay) { var pr = v.play(); if (pr !== undefined) pr.catch(function(e){}); }" +
-        "        else { v.pause(); }" +
+        "        if (shouldPlay) { var pr = vs[i].play(); if (pr !== undefined) pr.catch(function(e){}); }" +
+        "        else vs[i].pause();" +
         "      }" +
         "    } catch(e) {}" +
         "  }" +
@@ -153,12 +156,12 @@ public class MainActivity extends Activity {
         "    try {" +
         "      if (window.jwplayer) {" +
         "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
-        "        if (p && typeof p.seek === 'function') { p.seek(target); }" +
+        "        if (p && typeof p.seek === 'function') { p.seek(target); return; }" +
         "      }" +
         "    } catch(e) {}" +
         "    try {" +
-        "      var vs = document.querySelectorAll('video');" +
-        "      for (var i = 0; i < vs.length; i++) { vs[i].currentTime = target; }" +
+        "      var v = getPrimary();" +
+        "      if (v) v.currentTime = target;" +
         "    } catch(e) {}" +
         "  }" +
         "  function seekRatio(ratio) {" +
@@ -167,15 +170,15 @@ public class MainActivity extends Activity {
         "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
         "        if (p && typeof p.seek === 'function') {" +
         "          var dur = (typeof p.getDuration === 'function' ? p.getDuration() : 0) || 0;" +
-        "          if (dur > 0) p.seek(dur * ratio);" +
+        "          if (dur > 0) { p.seek(dur * ratio); return; }" +
         "        }" +
         "      }" +
         "    } catch(e) {}" +
         "    try {" +
-        "      var vs = document.querySelectorAll('video');" +
-        "      for (var i = 0; i < vs.length; i++) {" +
-        "        var v = vs[i];" +
-        "        if (v.duration && v.duration > 0) { v.currentTime = v.duration * ratio; }" +
+        "      var v = getPrimary();" +
+        "      if (v) {" +
+        "        var d = (v.duration && isFinite(v.duration)) ? v.duration : (v.seekable && v.seekable.length > 0 ? v.seekable.end(v.seekable.length - 1) : 0);" +
+        "        if (d > 0) v.currentTime = d * ratio;" +
         "      }" +
         "    } catch(e) {}" +
         "  }" +
@@ -183,11 +186,11 @@ public class MainActivity extends Activity {
         "    try {" +
         "      if (window.jwplayer) {" +
         "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
-        "        if (p && typeof p.setPlaybackRate === 'function') { p.setPlaybackRate(speed); }" +
+        "        if (p && typeof p.setPlaybackRate === 'function') p.setPlaybackRate(speed);" +
         "      }" +
         "    } catch(e) {}" +
         "    try {" +
-        "      var vs = document.querySelectorAll('video');" +
+        "      var vs = getAllVideos(document);" +
         "      for (var i = 0; i < vs.length; i++) vs[i].playbackRate = speed;" +
         "    } catch(e) {}" +
         "  }" +
@@ -207,73 +210,36 @@ public class MainActivity extends Activity {
         "    var evts = ['timeupdate', 'play', 'pause', 'seeking', 'seeked', 'durationchange'];" +
         "    for (var i = 0; i < evts.length; i++) {" +
         "      v.addEventListener(evts[i], function() {" +
-        "        if (v.duration && v.duration > 0) notify(v.currentTime || 0, v.duration, !v.paused);" +
-        "      });" +
+        "        var d = (v.duration && isFinite(v.duration)) ? v.duration : (v.seekable && v.seekable.length > 0 ? v.seekable.end(v.seekable.length - 1) : 0);" +
+        "        if (d > 0) notify(v.currentTime || 0, d, !v.paused);" +
+        "      }, true);" +
         "    }" +
         "  }" +
-        "  function hookAllEmbedVideos() {" +
-        "    try {" +
-        "      var vs = document.querySelectorAll('video');" +
-        "      for (var i = 0; i < vs.length; i++) hookEmbedVideo(vs[i]);" +
-        "    } catch(e) {}" +
-        "    try {" +
-        "      if (window.jwplayer) {" +
-        "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
-        "        if (p && typeof p.on === 'function' && !p.__siska_hooked) {" +
-        "          p.__siska_hooked = true;" +
-        "          p.on('time', function(e) { notify(e.position, e.duration, true); });" +
-        "          p.on('play', function() { notify(p.getPosition() || 0, p.getDuration() || 0, true); });" +
-        "          p.on('pause', function() { notify(p.getPosition() || 0, p.getDuration() || 0, false); });" +
-        "          p.on('seek', function(e) { notify(e.offset || 0, p.getDuration() || 0, true); });" +
-        "        }" +
-        "      }" +
-        "    } catch(e) {}" +
+        "  function hookAll() {" +
+        "    var vs = getAllVideos(document);" +
+        "    for (var i = 0; i < vs.length; i++) hookEmbedVideo(vs[i]);" +
         "  }" +
-        "  hookAllEmbedVideos();" +
+        "  hookAll();" +
         "  try {" +
-        "    var obs = new MutationObserver(function() { hookAllEmbedVideos(); });" +
+        "    var obs = new MutationObserver(function() { hookAll(); });" +
         "    obs.observe(document.documentElement || document.body, { childList: true, subtree: true });" +
         "  } catch(e) {}" +
         "  setInterval(function() {" +
         "    try {" +
-        "      var cur = 0, dur = 0, playing = false;" +
-        "      if (window.jwplayer) {" +
-        "        var p = (typeof window.jwplayer === 'function') ? window.jwplayer() : null;" +
-        "        if (p && typeof p.getPosition === 'function') {" +
-        "          cur = p.getPosition() || 0;" +
-        "          dur = (typeof p.getDuration === 'function' ? p.getDuration() : 0) || 0;" +
-        "          playing = (typeof p.getState === 'function') ? (p.getState() === 'playing') : false;" +
-        "        }" +
+        "      var v = getPrimary();" +
+        "      if (v) {" +
+        "        var d = (v.duration && isFinite(v.duration)) ? v.duration : (v.seekable && v.seekable.length > 0 ? v.seekable.end(v.seekable.length - 1) : 0);" +
+        "        if (d > 0) notify(v.currentTime || 0, d, !v.paused);" +
         "      }" +
-        "      if (!dur) {" +
-        "        var vs = document.querySelectorAll('video');" +
-        "        for (var i = 0; i < vs.length; i++) {" +
-        "          if (vs[i].duration && vs[i].duration > 0) {" +
-        "            cur = vs[i].currentTime || 0;" +
-        "            dur = vs[i].duration || 0;" +
-        "            playing = !vs[i].paused;" +
-        "            break;" +
-        "          }" +
-        "        }" +
-        "      }" +
-        "      notify(cur, dur, playing);" +
         "    } catch(e) {}" +
         "  }, 350);" +
         "  window.addEventListener('message', function(e) {" +
-        "    if (!e.data || typeof e.data !== 'object') return;" +
-        "    if (e.data.type === 'SISKA_VIDEO_SEEK') {" +
-        "      seek(e.data.delta);" +
-        "    } else if (e.data.type === 'SISKA_VIDEO_SEEK_TO') {" +
-        "      seekTo(e.data.target);" +
-        "    } else if (e.data.type === 'SISKA_VIDEO_SEEK_RATIO') {" +
-        "      seekRatio(e.data.ratio);" +
-        "    } else if (e.data.type === 'SISKA_VIDEO_SET_PLAY') {" +
-        "      applyPlayState(e.data.play);" +
-        "    } else if (e.data.type === 'SISKA_VIDEO_TOGGLE') {" +
-        "      applyPlayState(e.data.play !== undefined ? e.data.play : false);" +
-        "    } else if (e.data.type === 'SISKA_VIDEO_SPEED') {" +
-        "      setSpeed(e.data.speed);" +
-        "    }" +
+        "    if (!e || !e.data || typeof e.data !== 'object') return;" +
+        "    if (e.data.type === 'SISKA_VIDEO_SEEK' || e.data.type === 'SISKA_VIDEO_SEEK_DELTA') seek(e.data.delta);" +
+        "    else if (e.data.type === 'SISKA_VIDEO_SEEK_TO') seekTo(e.data.target);" +
+        "    else if (e.data.type === 'SISKA_VIDEO_SEEK_RATIO') seekRatio(e.data.ratio);" +
+        "    else if (e.data.type === 'SISKA_VIDEO_SET_PLAY' || e.data.type === 'SISKA_VIDEO_TOGGLE') applyPlayState(e.data.play !== undefined ? e.data.play : false);" +
+        "    else if (e.data.type === 'SISKA_VIDEO_SPEED') setSpeed(e.data.speed);" +
         "    try {" +
         "      var cFrames = document.querySelectorAll('iframe');" +
         "      for (var ci = 0; ci < cFrames.length; ci++) {" +
@@ -1213,21 +1179,34 @@ public class MainActivity extends Activity {
     private void seekVideoDelta(int secondsDelta) {
         String script =
             "(function(delta) {" +
+            "  function getAllVideos(root) {" +
+            "    var res = [];" +
+            "    try {" +
+            "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
+            "      var n = walker.currentNode;" +
+            "      while (n) {" +
+            "        if (n.tagName === 'VIDEO') res.push(n);" +
+            "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
+            "        n = walker.nextNode();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    return res;" +
+            "  }" +
             "  function seekInWin(win) {" +
             "    if (!win) return;" +
             "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
+            "      var vs = getAllVideos(win.document);" +
             "      var targetVideo = null;" +
             "      for (var i = 0; i < vs.length; i++) {" +
             "        var v = vs[i];" +
-            "        if (v.duration > 30 || !v.paused || vs.length === 1) {" +
+            "        if (!v.paused || v.duration > 30 || vs.length === 1) {" +
             "          targetVideo = v; break;" +
             "        }" +
             "      }" +
             "      if (!targetVideo && vs.length > 0) targetVideo = vs[0];" +
             "      if (targetVideo) {" +
-            "        var d = targetVideo.duration && isFinite(targetVideo.duration) ? targetVideo.duration : 999999;" +
-            "        targetVideo.currentTime = Math.max(0, Math.min(d, targetVideo.currentTime + delta));" +
+            "        var d = (targetVideo.duration && isFinite(targetVideo.duration)) ? targetVideo.duration : (targetVideo.seekable && targetVideo.seekable.length > 0 ? targetVideo.seekable.end(targetVideo.seekable.length - 1) : 999999);" +
+            "        targetVideo.currentTime = Math.max(0, Math.min(d, (targetVideo.currentTime || 0) + delta));" +
             "      }" +
             "    } catch(e) {}" +
             "    try {" +
@@ -1242,12 +1221,14 @@ public class MainActivity extends Activity {
             "    } catch(e) {}" +
             "    try { win.postMessage({ type: 'SISKA_VIDEO_SEEK_DELTA', delta: delta }, '*'); } catch(e) {}" +
             "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) seekInWin(win.frames[j]);" +
+            "      for (var j = 0; j < win.frames.length; j++) {" +
+            "        try { seekInWin(win.frames[j]); } catch(err) {}" +
+            "      }" +
             "    } catch(e) {}" +
             "    try {" +
-            "      var iframes = win.document.querySelectorAll('iframe');" +
+            "      var iframes = win.document ? win.document.querySelectorAll('iframe') : [];" +
             "      for (var k = 0; k < iframes.length; k++) {" +
-            "        try { if (iframes[k].contentWindow) seekInWin(iframes[k].contentWindow); } catch(e) {}" +
+            "        try { if (iframes[k].contentWindow) seekInWin(iframes[k].contentWindow); } catch(err) {}" +
             "      }" +
             "    } catch(e) {}" +
             "  }" +
@@ -1259,14 +1240,27 @@ public class MainActivity extends Activity {
     private void seekVideoTo(double targetSeconds) {
         String script =
             "(function(target) {" +
+            "  function getAllVideos(root) {" +
+            "    var res = [];" +
+            "    try {" +
+            "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
+            "      var n = walker.currentNode;" +
+            "      while (n) {" +
+            "        if (n.tagName === 'VIDEO') res.push(n);" +
+            "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
+            "        n = walker.nextNode();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    return res;" +
+            "  }" +
             "  function seekInWin(win) {" +
             "    if (!win) return;" +
             "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
+            "      var vs = getAllVideos(win.document);" +
             "      var targetVideo = null;" +
             "      for (var i = 0; i < vs.length; i++) {" +
             "        var v = vs[i];" +
-            "        if (v.duration > 30 || !v.paused || vs.length === 1) {" +
+            "        if (!v.paused || v.duration > 30 || vs.length === 1) {" +
             "          targetVideo = v; break;" +
             "        }" +
             "      }" +
@@ -1289,12 +1283,14 @@ public class MainActivity extends Activity {
             "    } catch(e) {}" +
             "    try { win.postMessage({ type: 'SISKA_VIDEO_SEEK_TO', target: target }, '*'); } catch(e) {}" +
             "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) seekInWin(win.frames[j]);" +
+            "      for (var j = 0; j < win.frames.length; j++) {" +
+            "        try { seekInWin(win.frames[j]); } catch(err) {}" +
+            "      }" +
             "    } catch(e) {}" +
             "    try {" +
-            "      var iframes = win.document.querySelectorAll('iframe');" +
+            "      var iframes = win.document ? win.document.querySelectorAll('iframe') : [];" +
             "      for (var k = 0; k < iframes.length; k++) {" +
-            "        try { if (iframes[k].contentWindow) seekInWin(iframes[k].contentWindow); } catch(e) {}" +
+            "        try { if (iframes[k].contentWindow) seekInWin(iframes[k].contentWindow); } catch(err) {}" +
             "      }" +
             "    } catch(e) {}" +
             "  }" +
@@ -1306,10 +1302,23 @@ public class MainActivity extends Activity {
     private void seekVideoRatio(double ratio) {
         String script =
             "(function(r) {" +
+            "  function getAllVideos(root) {" +
+            "    var res = [];" +
+            "    try {" +
+            "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
+            "      var n = walker.currentNode;" +
+            "      while (n) {" +
+            "        if (n.tagName === 'VIDEO') res.push(n);" +
+            "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
+            "        n = walker.nextNode();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    return res;" +
+            "  }" +
             "  function seekInWin(win) {" +
             "    if (!win) return;" +
             "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
+            "      var vs = getAllVideos(win.document);" +
             "      for (var i = 0; i < vs.length; i++) {" +
             "        var v = vs[i];" +
             "        var d = v.duration;" +
@@ -1328,12 +1337,14 @@ public class MainActivity extends Activity {
             "    } catch(e) {}" +
             "    try { win.postMessage({ type: 'SISKA_VIDEO_SEEK_RATIO', ratio: r }, '*'); } catch(e) {}" +
             "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) seekInWin(win.frames[j]);" +
+            "      for (var j = 0; j < win.frames.length; j++) {" +
+            "        try { seekInWin(win.frames[j]); } catch(err) {}" +
+            "      }" +
             "    } catch(e) {}" +
             "    try {" +
-            "      var iframes = win.document.querySelectorAll('iframe');" +
+            "      var iframes = win.document ? win.document.querySelectorAll('iframe') : [];" +
             "      for (var k = 0; k < iframes.length; k++) {" +
-            "        try { if (iframes[k].contentWindow) seekInWin(iframes[k].contentWindow); } catch(e) {}" +
+            "        try { if (iframes[k].contentWindow) seekInWin(iframes[k].contentWindow); } catch(err) {}" +
             "      }" +
             "    } catch(e) {}" +
             "  }" +
@@ -1345,6 +1356,19 @@ public class MainActivity extends Activity {
     private void setVideoPlayState(boolean shouldPlay) {
         String script =
             "(function(play) {" +
+            "  function getAllVideos(root) {" +
+            "    var res = [];" +
+            "    try {" +
+            "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
+            "      var n = walker.currentNode;" +
+            "      while (n) {" +
+            "        if (n.tagName === 'VIDEO') res.push(n);" +
+            "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
+            "        n = walker.nextNode();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    return res;" +
+            "  }" +
             "  function apply(win) {" +
             "    if (!win) return;" +
             "    try {" +
@@ -1354,7 +1378,7 @@ public class MainActivity extends Activity {
             "      }" +
             "    } catch(e) {}" +
             "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
+            "      var vs = getAllVideos(win.document);" +
             "      for (var i = 0; i < vs.length; i++) {" +
             "        if (play) { var pr = vs[i].play(); if (pr !== undefined) pr.catch(function(e){}); }" +
             "        else vs[i].pause();" +
@@ -1362,7 +1386,15 @@ public class MainActivity extends Activity {
             "    } catch(e) {}" +
             "    try { win.postMessage({ type: 'SISKA_VIDEO_SET_PLAY', play: play }, '*'); } catch(e) {}" +
             "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) apply(win.frames[j]);" +
+            "      for (var j = 0; j < win.frames.length; j++) {" +
+            "        try { apply(win.frames[j]); } catch(err) {}" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var iframes = win.document ? win.document.querySelectorAll('iframe') : [];" +
+            "      for (var k = 0; k < iframes.length; k++) {" +
+            "        try { if (iframes[k].contentWindow) apply(iframes[k].contentWindow); } catch(err) {}" +
+            "      }" +
             "    } catch(e) {}" +
             "  }" +
             "  apply(window);" +
@@ -1382,6 +1414,19 @@ public class MainActivity extends Activity {
     private void setVideoSpeed(float speed) {
         String script =
             "(function(spd) {" +
+            "  function getAllVideos(root) {" +
+            "    var res = [];" +
+            "    try {" +
+            "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
+            "      var n = walker.currentNode;" +
+            "      while (n) {" +
+            "        if (n.tagName === 'VIDEO') res.push(n);" +
+            "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
+            "        n = walker.nextNode();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    return res;" +
+            "  }" +
             "  function apply(win) {" +
             "    if (!win) return;" +
             "    try {" +
@@ -1391,12 +1436,20 @@ public class MainActivity extends Activity {
             "      }" +
             "    } catch(e) {}" +
             "    try {" +
-            "      var vs = win.document.querySelectorAll('video');" +
+            "      var vs = getAllVideos(win.document);" +
             "      for (var i = 0; i < vs.length; i++) vs[i].playbackRate = spd;" +
             "    } catch(e) {}" +
             "    try { win.postMessage({ type: 'SISKA_VIDEO_SPEED', speed: spd }, '*'); } catch(e) {}" +
             "    try {" +
-            "      for (var j = 0; j < win.frames.length; j++) apply(win.frames[j]);" +
+            "      for (var j = 0; j < win.frames.length; j++) {" +
+            "        try { apply(win.frames[j]); } catch(err) {}" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    try {" +
+            "      var iframes = win.document ? win.document.querySelectorAll('iframe') : [];" +
+            "      for (var k = 0; k < iframes.length; k++) {" +
+            "        try { if (iframes[k].contentWindow) apply(iframes[k].contentWindow); } catch(err) {}" +
+            "      }" +
             "    } catch(e) {}" +
             "  }" +
             "  apply(window);" +
@@ -1678,8 +1731,8 @@ public class MainActivity extends Activity {
                 mCustomViewCallback = callback;
                 mOriginalOrientation = getRequestedOrientation();
 
-                // Keep WebView INVISIBLE (not GONE) so Chromium preserves active JavaScript timers & events!
-                mWebView.setVisibility(View.INVISIBLE);
+                // Keep WebView VISIBLE behind mFullscreenContainer so Chromium never throttles rendering or pauses DOM timers!
+                mWebView.setVisibility(View.VISIBLE);
                 mFabSettings.setVisibility(View.GONE); // Hide FAB in fullscreen video
                 mFullscreenContainer.setVisibility(View.VISIBLE);
 
@@ -2101,6 +2154,19 @@ public class MainActivity extends Activity {
             "(function() {" +
             "  if (window.__siska_sync_injected) return;" +
             "  window.__siska_sync_injected = true;" +
+            "  function getAllVideos(root) {" +
+            "    var res = [];" +
+            "    try {" +
+            "      var walker = document.createTreeWalker(root || document.documentElement || document.body, NodeFilter.SHOW_ELEMENT, null, false);" +
+            "      var n = walker.currentNode;" +
+            "      while (n) {" +
+            "        if (n.tagName === 'VIDEO') res.push(n);" +
+            "        if (n.shadowRoot) res = res.concat(getAllVideos(n.shadowRoot));" +
+            "        n = walker.nextNode();" +
+            "      }" +
+            "    } catch(e) {}" +
+            "    return res;" +
+            "  }" +
             "  function parsePageDuration() {" +
             "    try {" +
             "      var walker = document.createTreeWalker(document.body || document.documentElement, NodeFilter.SHOW_TEXT, null, false);" +
@@ -2147,10 +2213,10 @@ public class MainActivity extends Activity {
             "    var fs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;" +
             "    if (fs) {" +
             "      if (fs.tagName === 'VIDEO') return fs;" +
-            "      var fv = fs.querySelector('video');" +
+            "      var fv = fs.querySelector ? fs.querySelector('video') : null;" +
             "      if (fv) return fv;" +
             "    }" +
-            "    var vs = document.querySelectorAll('video');" +
+            "    var vs = getAllVideos(document);" +
             "    if (!vs || vs.length === 0) return null;" +
             "    if (vs.length === 1) return vs[0];" +
             "    var best = null;" +
@@ -2198,22 +2264,31 @@ public class MainActivity extends Activity {
             "      sendUpdate(e.data.current, e.data.duration, e.data.playing);" +
             "    }" +
             "  });" +
+            "  var evts = ['timeupdate', 'play', 'pause', 'seeking', 'seeked', 'durationchange', 'loadedmetadata'];" +
+            "  for (var k = 0; k < evts.length; k++) {" +
+            "    window.addEventListener(evts[k], function(e) {" +
+            "      var t = e.target;" +
+            "      if (t && t.tagName === 'VIDEO') {" +
+            "        var d = getValidDuration(t);" +
+            "        sendUpdate(t.currentTime || 0, d, !t.paused);" +
+            "      }" +
+            "    }, true);" +
+            "  }" +
             "  function hookVideo(v) {" +
             "    if (!v || v.__siska_hooked) return;" +
             "    v.__siska_hooked = true;" +
-            "    var evts = ['timeupdate', 'play', 'pause', 'seeking', 'seeked', 'durationchange', 'loadedmetadata'];" +
             "    for (var i = 0; i < evts.length; i++) {" +
             "      v.addEventListener(evts[i], function() {" +
             "        if (v === findPrimaryVideo() || !v.paused) {" +
             "          var d = getValidDuration(v);" +
             "          sendUpdate(v.currentTime || 0, d, !v.paused);" +
             "        }" +
-            "      });" +
+            "      }, true);" +
             "    }" +
             "  }" +
             "  function hookAll() {" +
             "    try {" +
-            "      var vs = document.querySelectorAll('video');" +
+            "      var vs = getAllVideos(document);" +
             "      for (var i = 0; i < vs.length; i++) hookVideo(vs[i]);" +
             "    } catch(e) {}" +
             "    try {" +
